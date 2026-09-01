@@ -12,7 +12,7 @@ import { runLookup } from './modules/lookup';
 import { runTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
 import { queueStats } from './poster';
-import { sleep } from './util';
+import { redactUrl, sleep } from './util';
 
 const l = log('main');
 
@@ -28,7 +28,7 @@ function banner(): void {
   l.info(`mode: ${config.dryRun ? 'DRY RUN (nothing is posted)' : 'LIVE'}`);
   l.info(`modules on : ${on.join(', ') || 'none'}`);
   l.info(`modules off: ${off.join(', ') || 'none'}`);
-  l.info(`rpc: ${config.rpcUrls.join(' , ')}`);
+  l.info(`rpc: ${config.rpcUrls.map(redactUrl).join(' , ')}`);
   if (!config.dryRun && !hasXCredentials()) l.warn('LIVE mode without X credentials \u2014 posts will fail. Set the four X_* values.');
 }
 
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
   cursor = await resolveStartBlock();
   l.info(`starting at block ${cursor}`);
   const b = budget();
-  l.info(`post budget this month: ${b.used}/${b.max}`);
+  l.info(`budget this month: $${b.usedUsd.toFixed(3)} of $${b.maxUsd} (${b.used}/${b.max} posts)`);
 
   if (config.modules.watch) {
     cron.schedule(config.watchCronMorning, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });

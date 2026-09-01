@@ -84,3 +84,17 @@ export const truncateTweet = (text: string, limit = 275): string => {
   const out = lines.join('\n');
   return tweetLength(out) <= limit ? out : [...out].slice(0, limit - 1).join('') + '\u2026';
 };
+
+/**
+ * An RPC URL carries its API key in the path, so it must never reach a log line
+ * whole. Keeps the provider visible - which is the only part worth logging.
+ */
+export function redactUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const tail = u.pathname.replace(/\/+$/, '').split('/').pop() ?? '';
+    return tail.length > 6 ? `${u.protocol}//${u.host}/…${tail.slice(-4)}` : `${u.protocol}//${u.host}${u.pathname}`;
+  } catch {
+    return '(unparseable url)';
+  }
+}
