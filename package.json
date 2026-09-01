@@ -1,0 +1,38 @@
+{
+  "name": "nyc-activity-log",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "CC0-1.0",
+  "description": "Normies Yacht Club Activity Log \u2014 a verifiable ship's log for X. Community built, CC0. Not the official club account.",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "check": "tsc --noEmit",
+    "font": "node scripts/fetch-font.mjs",
+    "cli": "tsx src/cli.ts",
+    "preview:claim": "tsx src/cli.ts preview claim 1709",
+    "preview:sale": "tsx src/cli.ts preview sale 1709",
+    "preview:watch": "tsx src/cli.ts preview watch",
+    "verify": "tsx src/cli.ts verify",
+    "tools:sales": "node scripts/find-sales.mjs",
+    "tools:art": "tsx scripts/audit-art.mjs",
+    "tools:x": "node scripts/x-diag.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.60",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "twitter-api-v2": "^1.17.2",
+    "viem": "^2.21.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.5.4"
+  }
+}

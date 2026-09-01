@@ -1,0 +1,199 @@
+{
+  "_comment": "Club constants. NEVER hardcode these in templates. Sources: normiesyachtclub.com/llms.txt, /api/v1/*, official LOG of @NormieYachtClub.",
+  "club": {
+    "name": "Normies Yacht Club",
+    "symbol": "NYC",
+    "handle": "@NormieYachtClub",
+    "site": "https://normiesyachtclub.com",
+    "api": "https://normiesyachtclub.com/api/v1",
+    "opensea": "https://opensea.io/collection/normies-yacht-club",
+    "license": "CC0-1.0"
+  },
+  "contract": {
+    "address": "0x87306c282eBd62Fe1c80AA69Dd9408331Dc11f64",
+    "chainId": 1,
+    "network": "ethereum-mainnet",
+    "deployBlock": 25514828,
+    "standard": "ERC-721",
+    "normiesSupplyCap": 10000
+  },
+  "agents": {
+    "standard": "ERC-6551",
+    "registry": "0x000000006551c19487814612e58FE06813775758",
+    "implementation": "0x41C8f39463A868d3A88af00cd0fe7102F30E44eC",
+    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "classes": {
+    "Cruiser": {
+      "weight": 1,
+      "anchorPointsPerDay": 10
+    },
+    "Sloop": {
+      "weight": 2,
+      "anchorPointsPerDay": 20
+    },
+    "Superyacht": {
+      "weight": 5,
+      "anchorPointsPerDay": 50
+    },
+    "Commodore": {
+      "weight": 12,
+      "anchorPointsPerDay": 120,
+      "note": "Superyacht + 2 extras"
+    }
+  },
+  "anchorPoints": {
+    "base": 10,
+    "note": "Off-chain club ledger. Not a token, no contract. Earned by holding."
+  },
+  "chandlery": {
+    "_source": "Live catalog at RELAY /chandlery, read 1 Sep 2026. The relay is authoritative; these are the fallback.",
+    "firework": 25,
+    "rename": 30,
+    "livery": 40,
+    "flag": 50,
+    "loungeBadge": 60,
+    "nameplate": 80,
+    "transom": 120
+  },
+  "tide": {
+    "daily": {
+      "cost": 0,
+      "entriesPerCaptain": 1,
+      "closeUTC": "00:00",
+      "note": "One hull marked by an unforeseeable block. Mark is permanent."
+    },
+    "sunday": {
+      "costPerHull": 100,
+      "minHulls": 3,
+      "maxHullsPerWallet": 3,
+      "weight": "class",
+      "draw": "future block",
+      "closeUTC": "18:00",
+      "round3ClosesAt": "2026-09-06T18:00:00Z",
+      "note": "A round always runs its full week and cannot be ended early."
+    },
+    "_source": "Live round at RELAY /tide."
+  },
+  "islands": {
+    "seasonIIClosesAt": "2026-09-14T11:40:15Z",
+    "forgeOpensAt": "2026-09-14T12:00:00Z",
+    "forgeClosesAt": null,
+    "hullsPerIsland": 10,
+    "netSupplyChange": -9,
+    "grades": [
+      "Cay",
+      "Isle",
+      "Estate",
+      "Flagship"
+    ],
+    "gradeThresholds": null,
+    "gradeThresholdsNote": "NOT published by the club. Never invent them. Pedigree prints the raw weight sum only.",
+    "visitors": "never limited",
+    "headStartEndsAt": "2026-09-15T12:00:00Z",
+    "_source": "Live phase at RELAY /forge. Never trust these dates over the relay."
+  },
+  "voice": {
+    "allow": [
+      "hull",
+      "afloat",
+      "born from",
+      "captain",
+      "watch",
+      "Tide",
+      "Chandlery",
+      "Anchor Points",
+      "Pedigree",
+      "Register",
+      "Marina",
+      "The Marina",
+      "Commodore",
+      "berth",
+      "log"
+    ],
+    "deny": [
+      "mint hype",
+      "staking",
+      "allowlist",
+      "wen",
+      "diamond hands",
+      "floor is",
+      "gm ser",
+      "pump",
+      "moon",
+      "1000x",
+      "alpha leak",
+      "utility"
+    ],
+    "maxims": [
+      "One yacht = full member, any class.",
+      "Capability scales with rarity. Access never does.",
+      "Points cannot buy better odds."
+    ],
+    "header": "LOG OF THE NORMIES YACHT CLUB ⛵️",
+    "footer": [
+      "The log continues. ⚓",
+      "See you in The Marina 🌊"
+    ],
+    "disclaimer": "Community log. Not the official club account."
+  },
+  "watches": [
+    {
+      "name": "middle",
+      "fromHourUTC": 0,
+      "toHourUTC": 4
+    },
+    {
+      "name": "dawn",
+      "fromHourUTC": 4,
+      "toHourUTC": 8
+    },
+    {
+      "name": "forenoon",
+      "fromHourUTC": 8,
+      "toHourUTC": 12
+    },
+    {
+      "name": "afternoon",
+      "fromHourUTC": 12,
+      "toHourUTC": 16
+    },
+    {
+      "name": "first dog",
+      "fromHourUTC": 16,
+      "toHourUTC": 18
+    },
+    {
+      "name": "last dog",
+      "fromHourUTC": 18,
+      "toHourUTC": 20
+    },
+    {
+      "name": "first",
+      "fromHourUTC": 20,
+      "toHourUTC": 24
+    }
+  ],
+  "relay": {
+    "url": "https://nyc-realtime.fly.dev",
+    "note": "The club’s own public relay - same service the marina reads. Fleet-wide and hull-keyed routes only.",
+    "read": [
+      "/stats",
+      "/tide",
+      "/tide/round/{id}",
+      "/forge",
+      "/chandlery",
+      "/regatta",
+      "/berths",
+      "/logbook",
+      "/logbook/yacht/{id}",
+      "/health"
+    ],
+    "neverRead": [
+      "/regatta/leaderboard",
+      "/chandlery/{wallet}",
+      "/logbook/captain/{wallet}"
+    ],
+    "neverReadWhy": "They are keyed by wallet. The club publishes no holder lists and neither does its log."
+  }
+}
