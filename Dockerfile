@@ -4,6 +4,14 @@ FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
+# The slim image carries no fonts whatsoever. Without one, Skia falls back to
+# the only face this app registers - the club's pixel font - and every price,
+# block number and percentage on a card gets drawn in a face whose digits are
+# ambiguous. DejaVu Sans is what `font()` already asks for after Segoe UI.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
 

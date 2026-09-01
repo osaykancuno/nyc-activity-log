@@ -31,14 +31,32 @@ export function initFonts(): void {
       GlobalFonts.registerFromPath(resolve(config.paths.assets, f), 'ClubFont');
       CHROME = 'ClubFont';
       l.info(`font registered: ${f}`);
+      checkNumberFace();
       return;
     }
   } catch (e) {
     l.warn('font registration failed, using system face', e);
   }
+  checkNumberFace();
 }
 
-const font = (size: number, weight = '500') => `${weight} ${size}px "Segoe UI", "DejaVu Sans", sans-serif`;
+/**
+ * The two-face rule only holds if a plain sans exists to hold it up.
+ * A slim container has no fonts at all, and Skia then quietly draws the
+ * numbers in the pixel face - which is the one thing this file is built to
+ * avoid. Cheap to check, and the answer belongs in the deploy log.
+ */
+function checkNumberFace(): void {
+  const wanted = ['Segoe UI', 'DejaVu Sans', 'Liberation Sans', 'Noto Sans'];
+  const found = wanted.filter((f) => {
+    try { return GlobalFonts.has(f); } catch { return false; }
+  });
+  if (found.length) l.info(`numbers drawn in ${found[0]}`);
+  else l.warn('no plain sans available - numbers will fall back to the pixel face, whose digits are ambiguous. Install fonts-dejavu-core in the image.');
+}
+
+const font = (size: number, weight = '500') =>
+  `${weight} ${size}px "Segoe UI", "DejaVu Sans", "Liberation Sans", "Noto Sans", sans-serif`;
 const chromeFont = (size: number, weight = '600') =>
   CHROME ? `${weight} ${size}px "${CHROME}", "Segoe UI", sans-serif` : font(size, weight);
 
