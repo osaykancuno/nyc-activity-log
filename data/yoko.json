@@ -22,6 +22,7 @@
   },
   "byline": "Captain {name}'s entry: {date}, {watch} watch.",
   "_byline_comment": "The entry sits under the club's own log header, the same one the watch uses, so the diary reads as a page of this log and not as a second account.",
+  "footer": "See you in The Marina ⚓",
   "_voice": [
     "Minimalist. Two sentences, three at the very most.",
     "Patient, tranquil, a little mysterious. Warm, never loud.",

@@ -70,7 +70,7 @@ export async function runJournal(force = false): Promise<void> {
     // The card carries the entry, not the header - the header is the tweet's.
     // The tweet's first two lines are the log header and the byline; the card
     // draws those as chrome, so the page carries the entry itself and nothing else.
-    body: entry.text.split('\n').slice(2).filter((x) => x && x !== '\u2693').join(' '),
+    body: entry.text.split('\n').slice(2).filter((x) => x && x !== yoko.footer).join(' '),
     note: `${logDate(at)} · ${watchName(at)} watch · written by the keeper of this log`,
   });
 

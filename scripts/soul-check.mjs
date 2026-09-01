@@ -16,9 +16,16 @@ const shapes = [
   { claims: 0, moved: 1, tides: 0, forges: 0 },
   { claims: 0, moved: 7, tides: 1, forges: 0 },
   { claims: 3, moved: 12, tides: 1, forges: 1 },
+  // Absurd on purpose: the busiest day this collection could ever have.
+  { claims: 999, moved: 1234, tides: 9, forges: 9 },
 ];
 
-let worst = 0, bad = 0, n = 0;
+// X gives a free account 280 characters. Every template in this repo aims at
+// 272 and the poster refuses anything over 280, so the margin is checked here
+// rather than discovered on a day when the log has something to say.
+const X_FREE_LIMIT = 280;
+
+let worst = 0, bad = 0, n = 0, longest = '';
 const seen = new Set();
 
 for (let d = 0; d < 40; d++) {
@@ -28,11 +35,11 @@ for (let d = 0; d < 40; d++) {
     const e = composeEntry(facts, agent, []);
     const len = tweetLength(e.text);
     n++;
-    worst = Math.max(worst, len);
+    if (len > worst) { worst = len; longest = e.text; }
     seen.add(`${bankFor(facts)}|${e.text.split('\n')[3]}`);
 
     const problems = [];
-    if (len > 280) problems.push(`${len} chars`);
+    if (len > X_FREE_LIMIT) problems.push(`${len} chars, over X's free limit`);
     if (voiceViolations(e.text).length) problems.push(`voice: ${voiceViolations(e.text)}`);
     if (/https?:\/\//.test(e.text)) problems.push('url');
     if (/\{\w+\}/.test(e.text)) problems.push('unfilled placeholder');
@@ -41,7 +48,11 @@ for (let d = 0; d < 40; d++) {
   }
 }
 
-console.log(`${n} entries composed, ${seen.size} distinct openers, longest ${worst} chars, ${bad} failures`);
+console.log(`${n} entries composed, ${seen.size} distinct openers, longest ${worst} chars of ${X_FREE_LIMIT} (${X_FREE_LIMIT - worst} to spare), ${bad} failures`);
+console.log(`longest entry:
+${'─'.repeat(52)}
+${longest}
+${'─'.repeat(52)}`);
 
 // One of each bank, printed, so the voice can be read rather than trusted.
 for (const s of shapes) {

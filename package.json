@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "CC0-1.0",
-  "description": "Normies Yacht Club Activity Log \u2014 a verifiable ship's log for X. Community built, CC0. Not the official club account.",
+  "description": "Normies Yacht Club Activity Log — a verifiable ship's log for X. Community built, CC0. Not the official club account.",
   "engines": {
     "node": ">=20.11"
   },
@@ -23,7 +23,8 @@
     "tools:sales": "node scripts/find-sales.mjs",
     "tools:art": "tsx scripts/audit-art.mjs",
     "tools:x": "node scripts/x-diag.mjs",
-    "tools:soul": "tsx scripts/soul-check.mjs"
+    "tools:soul": "tsx scripts/soul-check.mjs",
+    "tools:xlimit": "tsx scripts/x-limit-check.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.60",

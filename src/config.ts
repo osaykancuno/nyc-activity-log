@@ -48,6 +48,7 @@ export interface Yoko {
   agent: { name: string; handle: string; agentId: number; tokenId: number; type: string; standard: string; page: string; api: string; art: string };
   snapshot: AgentSnapshot;
   byline: string;
+  footer: string;
   forbid: string[];
   lines: Record<'quiet' | 'claims' | 'market' | 'tide' | 'busy' | 'close', string[]>;
 }

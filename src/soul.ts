@@ -45,8 +45,7 @@ function hash(s: string): number {
 
 const hulls = (n: number): string => `${fmtInt(n)} hull${n === 1 ? '' : 's'}`;
 
-/** The mark every post in this log ends on. */
-const ANCHOR = '\u2693';
+
 
 function fill(line: string, f: DayFacts, a: AgentFacts): string {
   const map: Record<string, string> = {
@@ -106,9 +105,10 @@ function pick(bank: keyof typeof yoko.lines, seed: string, recent: string[], f: 
 }
 
 /**
- * The entry. Room is given up in one order: the anchor first, then the closing
- * thought. The opener never moves - it is the one line carrying the day's
- * figures, and an entry without it would say nothing at all.
+ * The entry. Room is given up in one order: the closing thought first, then the
+ * sign-off - every post in this log ends on the Marina and the anchor, so that
+ * line stays while there is any room for it at all. The opener never moves: it
+ * is the one line carrying the day's figures.
  */
 export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []): Entry {
   const bank = bankFor(f);
@@ -125,9 +125,9 @@ export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []):
   const head = [club.voice.header, fill(yoko.byline, f, a), ''];
 
   const candidates = [
-    [...head, opener, close, '', ANCHOR],
+    [...head, opener, close, '', yoko.footer],
+    [...head, opener, '', yoko.footer],
     [...head, opener, close],
-    [...head, opener, '', ANCHOR],
     [...head, opener],
   ]
     .map((lines) => lines.filter((x, i, arr) => !(x === '' && arr[i - 1] === '')).join('\n').replace(/\n{3,}/g, '\n\n').trim());
