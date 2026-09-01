@@ -102,7 +102,8 @@ async function verify(): Promise<void> {
   }
 
   console.log(`\n  mode: ${config.dryRun ? 'DRY RUN' : 'LIVE'}`);
-  console.log(`\n  Suggested bio:\n  ${suggestedBio}\n`);
+  const bioLen = [...suggestedBio].length;
+  console.log(`\n  Suggested bio (${bioLen}/160${bioLen > 160 ? ' - TOO LONG' : ''}):\n  ${suggestedBio}\n`);
 }
 
 async function preview(args: string[]): Promise<void> {

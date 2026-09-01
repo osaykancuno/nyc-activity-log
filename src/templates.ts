@@ -1,4 +1,4 @@
-import { club } from './config';
+import { club, yoko } from './config';
 import type { Yacht } from './api/nyc';
 import {
   classBreakdown, fmtBlock, fmtEth, fmtInt, logDate, logEntryLine, shortAddr, truncateTweet, tweetLength, who,
@@ -226,10 +226,14 @@ export function forgePost(
   );
 }
 
-/** Bio for the account. Printed by `npm run cli -- verify` so it is never improvised. */
+/**
+ * Bio for the account. Printed by `npm run cli -- verify` so it is never
+ * improvised - and it names the keeper, because the account does now too.
+ * X allows 160 characters; `verify` prints the count so it is never guessed.
+ */
 export const suggestedBio =
-  `Ship's log of ${club.club.name}. Claims, sales, watches. Numbers from the chain. ` +
-  `Not the official club account (${club.club.handle}). CC0.`;
+  `Ship's log of ${club.club.name}, kept by ${yoko.agent.name} — Normie #${yoko.agent.tokenId}. ` +
+  `Numbers from the chain. Not the official club account (${club.club.handle}). CC0.`;
 
 export const shortAddress = shortAddr;
 
