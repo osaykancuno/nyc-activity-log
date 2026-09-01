@@ -1,8 +1,8 @@
 # Normies Yacht Club — Activity Log
 
-A community bot that reads the chain and the club's public CC0 API and writes what happens in the bay on X: claims, sales, sweeps, a twice-daily watch — and, once a day, a personal entry from the agent who keeps the log.
+The club's own bot. It reads the chain and the club's public CC0 API and writes what happens in the bay on X: claims, sales, sweeps, a twice-daily watch — and, once a day, a personal entry from the agent who keeps the log.
 
-**It is not the official club account.** It is a verifiable log. Every number it prints can be recomputed by anyone from `totalMinted()`, a transaction receipt, or `normiesyachtclub.com/api/v1`.
+**Official, and still built to be checked rather than believed.** Every number it prints can be recomputed by anyone from `totalMinted()`, a transaction receipt, or `normiesyachtclub.com/api/v1` — being the club's own account is not a reason to ask for trust it has not earned in public.
 
 - Club: <https://normiesyachtclub.com> · official handle `@NormieYachtClub`
 - Contract: `0x87306c282eBd62Fe1c80AA69Dd9408331Dc11f64` (Ethereum mainnet, ERC-721, art fully on-chain)

@@ -229,11 +229,12 @@ export function forgePost(
 /**
  * Bio for the account. Printed by `npm run cli -- verify` so it is never
  * improvised - and it names the keeper, because the account does now too.
+ * It says official because it is: the label on X names the club as the manager.
  * X allows 160 characters; `verify` prints the count so it is never guessed.
  */
 export const suggestedBio =
-  `Ship's log of ${club.club.name}, kept by ${yoko.agent.name} — Normie #${yoko.agent.tokenId}. ` +
-  `Numbers from the chain. Not the official club account (${club.club.handle}). CC0.`;
+  `Official ship's log of ${club.club.name}, kept by ${yoko.agent.name} — Normie #${yoko.agent.tokenId}. ` +
+  `Claims, sales, watches. Every number verifiable on-chain. CC0.`;
 
 export const shortAddress = shortAddr;
 

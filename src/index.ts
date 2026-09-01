@@ -25,7 +25,7 @@ function banner(): void {
   const entries = Object.entries(config.modules);
   const on = entries.filter(([, v]) => v).map(([k, v]) => (v === 'auto' ? `${k}(auto)` : k));
   const off = entries.filter(([, v]) => !v).map(([k]) => k);
-  l.info(`${club.club.name} Activity Log \u2014 community, CC0. ${club.voice.disclaimer}`);
+  l.info(`${club.club.name} Activity Log \u2014 official, CC0. ${club.voice.disclaimer}`);
   l.info(`mode: ${config.dryRun ? 'DRY RUN (nothing is posted)' : 'LIVE'}`);
   l.info(`modules on : ${on.join(', ') || 'none'}`);
   l.info(`modules off: ${off.join(', ') || 'none'}`);

@@ -45,7 +45,7 @@ Il piano gratuito basta con ampio margine: il bot fa una query di log ogni 20 se
 
 1. Crea un account X dedicato (non il tuo personale). Bio suggerita, la stampa anche `verify`:
 
-   > Ship's log of Normies Yacht Club. Claims, sales, watches. Numbers from the chain. Not the official club account (@NormieYachtClub). CC0.
+   > Official ship's log of Normies Yacht Club, kept by Yoko — Normie #8362. Claims, sales, watches. Every number verifiable on-chain. CC0.
 
 2. <https://developer.x.com> → Sign up → crea un **Project** e una **App**.
 3. **PRIMA** di generare i token: App → *User authentication settings* → **Read and Write**.
@@ -199,5 +199,8 @@ acquisti sono visibili solo per wallet, e questo log non passa in rassegna i por
 ## Cosa NON fa, di proposito
 
 Non inventa premi, gradi o classifiche. Non pubblica liste di wallet. Non fa listing
-o delisting. Non impersona `@NormieYachtClub`. Non pubblica un numero che tu non
-possa ricontrollare da solo sulla chain.
+o delisting. Non pubblica un numero che tu non possa ricontrollare da solo sulla chain.
+
+Essere l'account ufficiale non cambia nessuna di queste regole: è anzi il motivo
+per cui contano. Un log ufficiale che chiede di essere creduto sulla parola vale
+meno di uno che chiunque può ricontrollare riga per riga.

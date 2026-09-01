@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "CC0-1.0",
-  "description": "Normies Yacht Club Activity Log — a verifiable ship's log for X. Community built, CC0. Not the official club account.",
+  "description": "Normies Yacht Club Activity Log — the club's official ship's log for X. CC0. Every number verifiable on-chain.",
   "engines": {
     "node": ">=20.11"
   },
