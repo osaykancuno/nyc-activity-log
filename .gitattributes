@@ -1,0 +1,6 @@
+# Everything ships with Unix line endings. A Dockerfile or a shell script with
+# CRLF is a build that fails in five seconds for no visible reason.
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+*.otf binary
