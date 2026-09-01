@@ -1,6 +1,6 @@
 # Normies Yacht Club — Activity Log
 
-A community bot that reads the chain and the club's public CC0 API and writes what happens in the bay on X: claims, sales, sweeps, and a twice-daily watch.
+A community bot that reads the chain and the club's public CC0 API and writes what happens in the bay on X: claims, sales, sweeps, a twice-daily watch — and, once a day, a personal entry from the agent who keeps the log.
 
 **It is not the official club account.** It is a verifiable log. Every number it prints can be recomputed by anyone from `totalMinted()`, a transaction receipt, or `normiesyachtclub.com/api/v1`.
 
@@ -20,10 +20,26 @@ A community bot that reads the chain and the club's public CC0 API and writes wh
 | **F · Pedigree** | CLI | class weights of a forge set |
 | **G · Tide** | the club relay | a round opens: prize, cost, cap, close. It settles: winning hull, its weight against the whole entered fleet, the settle block and the draw hash |
 | **I · Forge** | relay phase + 10 hulls burned in one tx | arms itself when the club opens forging — no date to remember |
+| **J · Personal log** | 21:45 UTC, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
 
 **Off, deliberately.** The Chandlery (H) is the one module with data and still no post. The relay publishes the catalogue fleet-wide, but a *purchase* is only visible through `/chandlery/{wallet}` — so the only way to log renames and flags would be to walk every holder's wallet. The club publishes no holder lists and neither does its log, so H stays dark until a hull-keyed route exists. Same rule kills `/regatta/leaderboard` and `/logbook/captain/{wallet}`: read by the site, never by this bot.
 
 Nor does it post listings, delistings, wallet dumps, or anything it cannot point at.
+
+## Who keeps the log
+
+The account is not anonymous. It is written by **Yoko** — [agent #32683](https://www.normies.art/lab/agentic/agents/32683), an ERC-8004 agent bound to Normie #8362, one of the 10,000 originals: level 8, 73 action points, five canvas passes, net −67 pixels. Her portrait on every personal-log card is her real on-chain art.
+
+Module J is her diary. Everything else here is the club's record — numbers, blocks, hulls; once a day the keeper of that record writes up the day herself.
+
+**There is no model in the loop.** Her vocabulary is a file: [`data/yoko.json`](data/yoko.json). The day's numbers choose which bank of lines it draws from — quiet, claims, market, tide, busy — and a short memory in the state file keeps her from opening two entries the same way. That buys three things worth more than novelty: an entry costs one post and nothing else, it cannot invent a figure, and anyone can read her entire vocabulary before she ever speaks it.
+
+**What *is* live is the persona.** Her canvas level, action points, passes and pixel diff come from her own agent record at `api.normies.art` on every entry, so burning a Normie or editing pixels changes what the log says about her without a deploy. That endpoint is not ours, so it is allowed to move numbers and nothing else — its `backstory`, `greeting` and `systemPrompt` are read by nobody. Prose that reaches the timeline is prose that was committed to this repo.
+
+```bash
+npm run soul          # who is keeping the log, on which numbers, and today's entry
+npm run tools:soul    # every line, every bank, against the length and voice guards
+```
 
 ## The two sources
 
@@ -77,11 +93,13 @@ src/
   api/       the club's CC0 endpoints
   yacht.ts   one hull, from the API or - if the CDN has not caught up - from tokenURI
   render/    1000x1000 PNG cards drawn from the 40x40 bitmap
-  modules/   A/B/C/I, E, D
+  modules/   A/B/C/I, E, D, J
+  soul.ts    Yoko's voice: which line the day calls for, and the numbers in it
   templates  every string the account will ever publish
   poster     dedup, rate limit, monthly budget, dry run
   store      append-only ledger + block cursor
 data/club.json   classes, weights, Chandlery prices, Tide rules, island dates
+data/yoko.json   the keeper: her identity, and every sentence she can publish
 ```
 
 ### Tools
@@ -89,6 +107,7 @@ data/club.json   classes, weights, Chandlery prices, Tide rules, island dates
 ```bash
 npm run tools:sales    # recent secondary transfers, to test `cli tx` against real ones
 npm run tools:art      # compare the API bitmaps with the on-chain art
+npm run tools:soul     # 280 entries composed and checked: length, voice, placeholders
 ```
 
 Two design points worth knowing:

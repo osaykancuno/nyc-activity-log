@@ -1,5 +1,5 @@
 import { parseEther } from 'viem';
-import { club, config, hasXCredentials } from './config';
+import { club, config, hasXCredentials, yoko } from './config';
 import { log } from './logger';
 import { initStore } from './store';
 import { initFonts, renderYachtCard } from './render/card';
@@ -10,6 +10,7 @@ import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
 import { previewTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
+import { runJournal } from './modules/journal';
 import { parseHullId } from './modules/lookup';
 import { enqueue, waitForQueue } from './poster';
 import { lookupReply, pedigree, pedigreePost, suggestedBio } from './templates';
@@ -38,6 +39,8 @@ const HELP = `
     npm run cli -- preview sweep 12,44,1709    render + print a sweep post
     npm run cli -- preview lookup 1709         render + print a lookup reply
     npm run cli -- preview watch               build the watch post from live numbers
+    npm run cli -- preview journal             write Yoko's entry for today, now
+    npm run cli -- soul                        who is keeping this log, and on what numbers
     npm run cli -- tx 0xabc...                 replay a real transaction through the pipeline
     npm run cli -- backfill 25890000 25890500  replay a block range
     npm run cli -- pedigree 1,2,3,4,5,6,7,8,9,10   weight of a forge set
@@ -146,6 +149,9 @@ async function preview(args: string[]): Promise<void> {
     case 'watch':
       return runWatch(true);
 
+    case 'journal':
+      return runJournal(true);
+
     case 'tide':
       return previewTide();
 
@@ -212,6 +218,41 @@ async function doPedigree(args: string[]): Promise<void> {
   console.log(`\n${pedigreePost(pedigree(await resolveYachts(ids)))}\n`);
 }
 
+/**
+ * Who writes this log. Prints the agent's live numbers beside the snapshot in
+ * data/yoko.json, so it is obvious at a glance which one the entries are using.
+ */
+async function soul(): Promise<void> {
+  const { getAgentFacts, getPortrait } = await import('./api/agent');
+  const { composeEntry } = await import('./soul');
+  const { getJournal } = await import('./store');
+
+  const a = await getAgentFacts(true);
+  console.log(`
+  ${yoko.agent.name} — agent #${a.agentId}, bound to Normie #${a.tokenId} (${yoko.agent.type})`);
+  console.log(`  numbers from  ${a.source === 'api' ? `the agent API, read ${a.readAt.slice(0, 19)}Z` : 'data/yoko.json (the API did not answer)'}`);
+  console.log(`  canvas        level ${a.level}, ${a.actionPoints} action points, ${a.transformations} passes`);
+  console.log(`  pixels        +${a.pixelsAdded} / -${a.pixelsRemoved}, net ${a.pixelsNet}`);
+
+  const p = await getPortrait();
+  console.log(`  portrait      ${p ? `${(p.bits.match(/1/g) ?? []).length} lit pixels, cached` : 'unavailable'}`);
+
+  const j = getJournal();
+  console.log(`  today         ${j.claims} claimed, ${j.moved} moved, ${j.tides} tide, entry ${j.lastEntryDay === j.day ? 'written' : 'not written yet'}`);
+  console.log(`  vocabulary    ${Object.entries(yoko.lines).map(([k, v]) => `${k} ${v.length}`).join(', ')}`);
+
+  const sample = composeEntry(
+    { claims: j.claims, moved: j.moved, tides: j.tides, forges: j.forges, afloat: 0, at: new Date() },
+    a,
+    [...j.recent],
+  );
+  console.log(`
+${'─'.repeat(52)}
+${sample.text}
+${'─'.repeat(52)}
+`);
+}
+
 async function main(): Promise<void> {
   initStore();
   initFonts();
@@ -221,6 +262,7 @@ async function main(): Promise<void> {
     case 'tx': return fromTx(rest[0]);
     case 'backfill': return backfill(rest);
     case 'pedigree': return doPedigree(rest);
+    case 'soul': return soul();
     default: console.log(HELP);
   }
 }

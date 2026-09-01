@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config } from './config';
 import { log } from './logger';
-import { alreadyPosted, budget, countPost, markPosted } from './store';
+import { alreadyPosted, budget, countPost, markPosted, noteActivity } from './store';
 import { postToX } from './x/client';
 import { tweetLength, voiceViolations } from './util';
 
@@ -97,6 +97,7 @@ async function drain(): Promise<void> {
           countPost();
         }
         markPosted(job.key, { kind: job.kind, dryRun: config.dryRun });
+        noteActivity(job.kind);
         lastPostAt = Date.now();
         posted++;
       } catch (e: any) {

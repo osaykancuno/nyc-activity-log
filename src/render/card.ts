@@ -263,3 +263,109 @@ function fitNote(ctx: SKRSContext2D, note: string, W: number, y: number): void {
   while (ctx.measureText(text).width > max && text.length > 8) text = `${text.slice(0, -2)}…`;
   ctx.fillText(text, 60, y);
 }
+
+/* ── The personal log (module J) ──────────────────────────────────────────
+   Not a data card. This one is a page: Yoko's own pixels on the left, who she
+   is beside them, and the entry itself set large underneath. The face is the
+   agent's real art from normies.art, in the same 40x40 grid the hulls use. */
+
+export interface JournalCard {
+  portrait: { bits: string; on: string } | null;
+  name: string;
+  identity: string;
+  stats: string[];
+  body: string;
+  note: string;
+}
+
+/** Greedy wrap. Returns the lines, shrinking the face never the words. */
+function wrap(ctx: SKRSContext2D, text: string, max: number): string[] {
+  const out: string[] = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(/\s+/).filter(Boolean)) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width > max && line) {
+        out.push(line);
+        line = word;
+      } else {
+        line = next;
+      }
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+export function renderJournalCard(c: JournalCard): Buffer {
+  const W = 1000, H = 1000;
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  chrome(ctx, W, H, 'personal log');
+
+  const scale = 8;
+  const face = 40 * scale;
+  const top = 118;
+
+  if (c.portrait) {
+    ctx.strokeStyle = 'rgba(191,145,81,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(59, top - 1, face + 2, face + 2);
+    drawBits(ctx, c.portrait.bits, 60, top, scale, c.portrait.on || ON);
+  }
+
+  const tx = c.portrait ? 60 + face + 44 : 60;
+  ctx.fillStyle = INK;
+  ctx.font = font(46, '600');
+  ctx.fillText(c.name, tx, top + 54);
+
+  ctx.fillStyle = GOLD_DIM;
+  ctx.font = font(24, '500');
+  ctx.fillText(c.identity, tx, top + 92);
+
+  let sy = top + 148;
+  for (const line of c.stats) {
+    ctx.fillStyle = SOFT;
+    ctx.font = font(23, '400');
+    ctx.fillText(line, tx, sy);
+    sy += 36;
+  }
+
+  // The entry itself, set in the space the portrait leaves, and centred in it -
+  // a short day and a long one should both look like a page rather than a
+  // caption stranded at the top of one.
+  const ruleY = top + face + 44;
+  const areaTop = ruleY + 34;
+  const areaBottom = 892;
+
+  let size = 46;
+  let lines: string[] = [];
+  let lead = 0;
+  do {
+    ctx.font = font(size, '500');
+    lines = wrap(ctx, c.body, W - 120);
+    lead = size + 18;
+    if (lines.length * lead - (lead - size) <= areaBottom - areaTop) break;
+    size -= 2;
+  } while (size > 24);
+
+  ctx.strokeStyle = 'rgba(61,61,61,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, ruleY);
+  ctx.lineTo(W - 60, ruleY);
+  ctx.stroke();
+
+  const blockH = lines.length * lead - (lead - size);
+  let by = areaTop + Math.max(0, (areaBottom - areaTop - blockH) / 2) + size;
+
+  ctx.fillStyle = INK;
+  ctx.font = font(size, '500');
+  for (const line of lines) {
+    ctx.fillText(line, 60, by);
+    by += lead;
+  }
+
+  if (c.note) fitNote(ctx, c.note, W, 930);
+  return canvas.toBuffer('image/png');
+}

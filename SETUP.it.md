@@ -145,6 +145,45 @@ VPS con `pm2 start "npx tsx src/index.ts" --name nyc-log`.
 | 14 set 2026, 12:00 UTC | **niente da fare**: `MODULE_FORGE=auto` legge la fase dal relay del club e si arma da solo |
 | Se il club espone gli acquisti Chandlery per scafo (non per wallet) | si accende anche H: dimmelo e lo collego |
 | Passaggio a X Basic | `MODULE_LOOKUP=true` e alza `MAX_POSTS_PER_MONTH` |
+| Una frase del diario non ti piace | cambiala in `data/yoko.json`, poi `npm run tools:soul` |
+
+## Il diario di Capitan Yoko (modulo J)
+
+Tutto il resto che pubblica l'account è **il registro del club**: numeri, blocchi, scafi.
+Una volta al giorno, alle **21:45 UTC**, chi tiene quel registro scrive la sua pagina.
+
+Chi è: **Yoko**, agente ERC-8004 **#32683**, legato al Normie **#8362**
+(<https://www.normies.art/lab/agentic/agents/32683>). Livello 8, 73 action points, cinque
+passaggi di canvas, netto −67 pixel. Il ritratto sulla card è la sua arte on-chain vera.
+
+Come funziona, in breve:
+
+- **Nessun modello di linguaggio nel giro.** Le frasi che Yoko può dire sono tutte scritte in
+  [`data/yoko.json`](data/yoko.json), nel repo. I numeri della giornata scelgono da quale gruppo
+  pescare — giornata muta, claim, mercato, Tide, giornata piena — e lo stato ricorda le ultime
+  otto frasi usate, così non apre due pagine di fila allo stesso modo.
+  Costo: **un post, 0,015 $**. Circa **0,45 $ al mese**. Nient'altro.
+- **La persona invece è viva.** Livello, action points, passaggi e differenza di pixel vengono
+  letti dal suo record su `api.normies.art` a ogni pagina. Se bruci un Normie o modifichi i
+  pixel, il diario lo dice da solo, senza toccare il codice.
+- **Quel servizio non è nostro**, quindi può spostare numeri e nient'altro: `backstory`,
+  `greeting` e `systemPrompt` non li legge nessuno. Sulla timeline finisce solo prosa che è
+  passata da questo repo.
+
+Per vederla:
+
+```bash
+npm run soul               # chi tiene il log, con che numeri, e la pagina di oggi
+npm run preview:journal    # scrive la pagina di oggi adesso (in DRY_RUN va in out/)
+npm run tools:soul         # 280 pagine composte e controllate: lunghezza, voce, segnaposto
+```
+
+Se una frase non ti convince, cambiala in `data/yoko.json` e basta: è un file di testo, non
+codice. `npm run tools:soul` ricontrolla tutto prima che vada online.
+
+Per spegnere il diario: `MODULE_JOURNAL=false`. Per farla scrivere solo nei giorni in cui è
+successo qualcosa: `JOURNAL_ON_QUIET_DAYS=false`. Su Railway non serve aggiungere nulla —
+il modulo è acceso di default.
 
 ## Il relay del club
 

@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { createServer } from 'node:http';
-import { club, config, hasXCredentials } from './config';
+import { club, config, hasXCredentials, yoko } from './config';
 import { log } from './logger';
 import { initStore, budget, getState } from './store';
 import { initFonts } from './render/card';
@@ -11,6 +11,7 @@ import { runWatch } from './modules/watch';
 import { runLookup } from './modules/lookup';
 import { runTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
+import { runJournal } from './modules/journal';
 import { queueStats } from './poster';
 import { redactUrl, sleep } from './util';
 
@@ -84,6 +85,11 @@ async function main(): Promise<void> {
     cron.schedule(config.watchCronMorning, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });
     cron.schedule(config.watchCronEvening, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });
     l.info(`watch scheduled: "${config.watchCronMorning}" and "${config.watchCronEvening}" UTC`);
+  }
+
+  if (config.modules.journal) {
+    cron.schedule(config.journalCron, () => { void runJournal().catch((e) => l.error('journal failed', e)); }, { timezone: 'UTC' });
+    l.info(`Yoko's entry scheduled: "${config.journalCron}" UTC (agent #${yoko.agent.agentId}, Normie #${yoko.agent.tokenId})`);
   }
 
   if (config.modules.tide) {

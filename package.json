@@ -17,10 +17,13 @@
     "preview:claim": "tsx src/cli.ts preview claim 1709",
     "preview:sale": "tsx src/cli.ts preview sale 1709",
     "preview:watch": "tsx src/cli.ts preview watch",
+    "preview:journal": "tsx src/cli.ts preview journal",
+    "soul": "tsx src/cli.ts soul",
     "verify": "tsx src/cli.ts verify",
     "tools:sales": "node scripts/find-sales.mjs",
     "tools:art": "tsx scripts/audit-art.mjs",
-    "tools:x": "node scripts/x-diag.mjs"
+    "tools:x": "node scripts/x-diag.mjs",
+    "tools:soul": "tsx scripts/soul-check.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.60",

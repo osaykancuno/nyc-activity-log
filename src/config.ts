@@ -9,6 +9,13 @@ export const ROOT = resolve(here, '..');
 /** Club constants. Never hardcode any of these in a template. */
 export const club = JSON.parse(readFileSync(resolve(ROOT, 'data/club.json'), 'utf8')) as Club;
 
+/**
+ * The keeper of the log. club.json is what the club is; yoko.json is who writes
+ * it down. Every sentence Yoko can ever publish lives in this file, in the repo,
+ * under review - the agent API is allowed to move her numbers and nothing else.
+ */
+export const yoko = JSON.parse(readFileSync(resolve(ROOT, 'data/yoko.json'), 'utf8')) as Yoko;
+
 export type ClassName = 'Cruiser' | 'Sloop' | 'Superyacht' | 'Commodore';
 
 export interface Club {
@@ -26,6 +33,24 @@ export interface Club {
   };
   voice: { allow: string[]; deny: string[]; maxims: string[]; header: string; footer: string[]; disclaimer: string };
   watches: { name: string; fromHourUTC: number; toHourUTC: number }[];
+}
+
+export interface AgentSnapshot {
+  level: number;
+  actionPoints: number;
+  transformations: number;
+  pixelsAdded: number;
+  pixelsRemoved: number;
+  pixelsNet: number;
+}
+
+export interface Yoko {
+  agent: { name: string; handle: string; agentId: number; tokenId: number; type: string; standard: string; page: string; api: string; art: string };
+  snapshot: AgentSnapshot;
+  header: string;
+  signature: string;
+  forbid: string[];
+  lines: Record<'quiet' | 'claims' | 'market' | 'tide' | 'busy' | 'close', string[]>;
 }
 
 const str = (k: string, d = ''): string => (process.env[k] ?? d).trim();
@@ -64,7 +89,13 @@ export const config = {
     forge: str('MODULE_FORGE', 'auto') === 'auto' ? 'auto' : bool('MODULE_FORGE', false),
     tide: bool('MODULE_TIDE', true),
     chandlery: bool('MODULE_CHANDLERY', false),
+    /** Module J - Yoko's own entry, once a day, in her voice. */
+    journal: bool('MODULE_JOURNAL', true),
   },
+
+  /** The agent's own record on normies.art. Numbers only; never its prose. */
+  agentApi: (str('AGENT_API', 'https://api.normies.art/agents')).replace(/\/$/, ''),
+  agentRefreshMs: Math.max(60 * 60_000, num('AGENT_REFRESH_H', 6) * 60 * 60_000),
 
   /** 'chain' draws the official tokenURI image; 'api' trusts the CDN snapshot. */
   artSource: (str('ART_SOURCE', 'chain') === 'api' ? 'api' : 'chain') as 'api' | 'chain',
@@ -73,6 +104,10 @@ export const config = {
   sweepMin: Math.max(2, num('SWEEP_MIN', 2)),
   watchCronMorning: str('WATCH_CRON_MORNING', '30 5 * * *'),
   watchCronEvening: str('WATCH_CRON_EVENING', '30 18 * * *'),
+  /** End of the first watch: the day is done, and Yoko writes it up. */
+  journalCron: str('JOURNAL_CRON', '45 21 * * *'),
+  /** Write an entry even on a day when nothing at all happened. */
+  journalOnQuietDays: bool('JOURNAL_ON_QUIET_DAYS', true),
 
   postMinIntervalMs: Math.max(1000, num('POST_MIN_INTERVAL_S', 20) * 1000),
   maxPostsPerMonth: num('MAX_POSTS_PER_MONTH', 450),
