@@ -4,3 +4,7 @@ out/
 data/state/
 assets/*.ttf
 *.log
+
+# never, ever
+gh-token.txt
+*token*.txt
