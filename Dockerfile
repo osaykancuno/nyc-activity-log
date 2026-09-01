@@ -12,6 +12,12 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 
+# Prove it landed. An image that cannot draw a legible digit must not build:
+# the alternative is finding out from a published card, which is how this was
+# found the first time.
+RUN test -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+ && test -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
 

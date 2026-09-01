@@ -17,46 +17,102 @@ const SOFT = '#7a7a7a';
 
 /**
  * Two faces on purpose. The club's pixel face is right for the chrome, but its
- * digits are ambiguous - a 5 reads as an S - and this account publishes prices.
- * Numbers therefore stay in a plain sans.
+ * digits are ambiguous - a 5 reads as an S - and this account publishes prices
+ * and block numbers. Numbers therefore stay in a plain sans.
+ *
+ * That rule is only worth as much as the sans behind it. It was quietly broken
+ * in production for a while: the slim base image carries no fonts at all, the
+ * CSS-style stack resolved to nothing, and Skia fell back to the only family
+ * registered - the pixel face. Every figure on every card was drawn in it, and
+ * a local preview could never show it, because Windows resolves Segoe UI.
+ *
+ * So neither face is left to font resolution now. Both are registered from a
+ * file we can point at, in this order, and the one that answers is named in the
+ * boot log:
+ *   1. assets/ - whatever `npm run font` fetched
+ *   2. a known system path - what fonts-dejavu-core installs, which the
+ *      Dockerfile asserts is present before the image is allowed to build
+ *   3. the family stack, for a desktop that has its own
  */
 let CHROME = '';
+let NUMBERS = '';
+/** What to call the number face in the log - a family name is not a file. */
+let NUMBERS_FROM = '';
 
-/** Pixelify Sans if `npm run font` fetched it, a system face otherwise. */
+/** Pixel faces are for chrome only; anything else can carry a number. */
+const isPixelFace = (file: string): boolean => /pixel/i.test(file);
+
+const SANS_PATHS = [
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+  '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+  'C:/Windows/Fonts/segoeui.ttf',
+];
+const SANS_BOLD_PATHS = [
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+  '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
+  'C:/Windows/Fonts/segoeuib.ttf',
+];
+const SANS_FAMILIES = ['Segoe UI', 'DejaVu Sans', 'Liberation Sans', 'Noto Sans', 'Arial', 'Helvetica'];
+
 export function initFonts(): void {
+  registerFromAssets();
+  if (!NUMBERS) registerSansFromDisk();
+  if (!NUMBERS) {
+    NUMBERS = SANS_FAMILIES.find(hasFamily) ?? '';
+    if (NUMBERS) NUMBERS_FROM = `${NUMBERS} (system)`;
+  }
+
+  l.info(`chrome drawn in ${CHROME ? 'the club pixel face' : 'a system sans - no pixel font in assets'}`);
+  if (NUMBERS) l.info(`numbers drawn in ${NUMBERS_FROM}`);
+  else l.error('NO PLAIN SANS ANYWHERE - numbers would fall back to the pixel face, whose digits are ambiguous. Install fonts-dejavu-core, or run `npm run font`.');
+}
+
+function hasFamily(name: string): boolean {
+  try { return GlobalFonts.has(name); } catch { return false; }
+}
+
+/** Whatever `npm run font` left behind, sorted into the two roles. */
+function registerFromAssets(): void {
   try {
     if (!existsSync(config.paths.assets)) return;
     for (const f of readdirSync(config.paths.assets)) {
       if (!/\.(ttf|otf)$/i.test(f)) continue;
-      GlobalFonts.registerFromPath(resolve(config.paths.assets, f), 'ClubFont');
-      CHROME = 'ClubFont';
-      l.info(`font registered: ${f}`);
-      checkNumberFace();
-      return;
+      const path = resolve(config.paths.assets, f);
+      if (isPixelFace(f)) {
+        if (CHROME) continue;
+        GlobalFonts.registerFromPath(path, 'ClubFont');
+        CHROME = 'ClubFont';
+      } else {
+        if (NUMBERS) continue;
+        GlobalFonts.registerFromPath(path, 'NumFont');
+        NUMBERS = 'NumFont';
+        NUMBERS_FROM = `assets/${f}`;
+      }
     }
   } catch (e) {
-    l.warn('font registration failed, using system face', e);
+    l.warn('font registration from assets failed', e);
   }
-  checkNumberFace();
 }
 
-/**
- * The two-face rule only holds if a plain sans exists to hold it up.
- * A slim container has no fonts at all, and Skia then quietly draws the
- * numbers in the pixel face - which is the one thing this file is built to
- * avoid. Cheap to check, and the answer belongs in the deploy log.
- */
-function checkNumberFace(): void {
-  const wanted = ['Segoe UI', 'DejaVu Sans', 'Liberation Sans', 'Noto Sans'];
-  const found = wanted.filter((f) => {
-    try { return GlobalFonts.has(f); } catch { return false; }
-  });
-  if (found.length) l.info(`numbers drawn in ${found[0]}`);
-  else l.warn('no plain sans available - numbers will fall back to the pixel face, whose digits are ambiguous. Install fonts-dejavu-core in the image.');
+/** The image installs DejaVu and asserts it at build time; take it by path. */
+function registerSansFromDisk(): void {
+  const regular = SANS_PATHS.find((p) => existsSync(p));
+  if (!regular) return;
+  try {
+    GlobalFonts.registerFromPath(regular, 'NumFont');
+    const bold = SANS_BOLD_PATHS.find((p) => existsSync(p));
+    if (bold) GlobalFonts.registerFromPath(bold, 'NumFont');
+    NUMBERS = 'NumFont';
+    NUMBERS_FROM = `${regular}${bold ? ' (+ bold)' : ''}`;
+  } catch (e) {
+    l.warn(`could not register ${regular}`, e);
+  }
 }
 
 const font = (size: number, weight = '500') =>
-  `${weight} ${size}px "Segoe UI", "DejaVu Sans", "Liberation Sans", "Noto Sans", sans-serif`;
+  `${weight} ${size}px ${NUMBERS ? `"${NUMBERS}", ` : ''}"Segoe UI", "DejaVu Sans", "Liberation Sans", "Noto Sans", sans-serif`;
 const chromeFont = (size: number, weight = '600') =>
   CHROME ? `${weight} ${size}px "${CHROME}", "Segoe UI", sans-serif` : font(size, weight);
 
