@@ -15,7 +15,7 @@ const res = await c.v2.userTimeline(process.env.X_USER_ID, {
 });
 for (const t of res.tweets ?? []) {
   const media = (res.includes?.media ?? []).filter((m) => t.attachments?.media_keys?.includes(m.media_key));
-  console.log(`\nhttps://x.com/${process.env.X_HANDLE ?? 'CapitanYOKO'}/status/${t.id}`);
+  console.log(`\nhttps://x.com/${process.env.X_HANDLE ?? 'LOGbyYOKO'}/status/${t.id}`);
   console.log(`posted ${t.created_at}`);
   console.log(`media: ${media.length ? media.map((m) => `${m.type} ${m.width}x${m.height}`).join(', ') : 'NONE'}`);
   console.log('---');

@@ -175,6 +175,18 @@ export function budget(): { used: number; max: number; left: number; usedUsd: nu
   };
 }
 
+/**
+ * How many posts the money actually allows, which is not MAX_POSTS_PER_MONTH.
+ * At $5 and $0.015 a post the wall is 333, so the post count is the second
+ * fence and never the first - worth printing so a busy month is not a surprise.
+ */
+export const effectiveCeiling = (): { posts: number; boundBy: 'money' | 'count' } => {
+  const byMoney = Math.floor(config.monthlyBudgetUsd / config.costPerPostUsd);
+  return byMoney <= config.maxPostsPerMonth
+    ? { posts: byMoney, boundBy: 'money' }
+    : { posts: config.maxPostsPerMonth, boundBy: 'count' };
+};
+
 export function countPost(costUsd = config.costPerPostUsd): void {
   rollMonth();
   state.monthCount += 1;

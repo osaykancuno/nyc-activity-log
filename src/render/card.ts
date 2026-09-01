@@ -128,37 +128,71 @@ export function renderYachtCard(y: Yacht, eyebrow: string, lines: CardLines): Bu
   return canvas.toBuffer('image/png');
 }
 
-/** Several hulls at once - a sweep, or a forge. Contact sheet, up to 12. */
-export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLines): Buffer {
+/**
+ * Several hulls at once - a sweep, or a forge.
+ *
+ * The count on the caption comes from the chain, so the grid has to keep up
+ * with it: a twenty-hull sweep that draws twelve boats is a card that lies
+ * about the very thing it is announcing. Columns, cell size and label size are
+ * all derived from how many there are, and only past two dozen does it stop
+ * drawing and say how many it left out.
+ */
+const FLEET_MAX_SHOWN = 24;
+const GRID_TOP = 118;
+const GRID_BOTTOM = 846;
+
+export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLines, hullCount?: number): Buffer {
   const W = 1000, H = 1000;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
   chrome(ctx, W, H, eyebrow);
 
-  const shown = yachts.slice(0, 12);
-  const cols = shown.length <= 4 ? 2 : shown.length <= 9 ? 3 : 4;
-  const rows = Math.ceil(shown.length / cols);
-  const cell = Math.min(Math.floor(760 / cols), Math.floor(620 / rows));
-  const scale = Math.max(2, Math.floor(cell / 40));
-  const size = scale * 40;
-  const gapX = (W - cols * size) / (cols + 1);
-  const gapY = 46;
-  const blockH = rows * size + (rows - 1) * gapY + 30;
-  const top = Math.max(120, 110 + (700 - blockH) / 2);
+  const shown = yachts.slice(0, FLEET_MAX_SHOWN);
+  const n = shown.length;
+  const total = hullCount ?? yachts.length;
 
-  shown.forEach((y, i) => {
-    const c = i % cols, r = Math.floor(i / cols);
-    const x = gapX + c * (size + gapX);
-    const yy = top + r * (size + gapY);
-    drawBits(ctx, y.art.bits, x, yy, scale, y.art.on || ON);
-    ctx.fillStyle = SOFT;
-    ctx.font = font(19, '500');
-    ctx.textAlign = 'center';
-    ctx.fillText(`#${y.id} \u00b7 ${y.class}`, x + size / 2, yy + size + 26);
-    ctx.textAlign = 'left';
-  });
+  if (n > 0) {
+    const cols = n <= 4 ? 2 : n <= 9 ? 3 : n <= 16 ? 4 : n <= 20 ? 5 : 6;
+    const rows = Math.ceil(n / cols);
 
-  caption(ctx, W, lines, 52, 872);
+    // Fit to both budgets: the width of the card and the height left above the
+    // caption, label and gutter included. Whichever is tighter sets the scale.
+    const gutter = 20;
+    const labelH = 26;
+    const gapY = 16;
+    const byWidth = Math.floor((W - 120 - (cols - 1) * gutter) / cols);
+    const byHeight = Math.floor((GRID_BOTTOM - GRID_TOP) / rows) - labelH - gapY;
+    const scale = Math.max(2, Math.floor(Math.min(byWidth, byHeight) / 40));
+    const size = scale * 40;
+
+    const gapX = (W - 120 - cols * size) / Math.max(1, cols - 1);
+    const blockH = rows * size + (rows - 1) * (labelH + gapY) + labelH;
+    const top = GRID_TOP + Math.max(0, (GRID_BOTTOM - GRID_TOP - blockH) / 2);
+
+    const labelSize = Math.max(13, Math.min(20, Math.round(size / 8)));
+
+    shown.forEach((y, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      const x = 60 + c * (size + gapX);
+      const yy = top + r * (size + labelH + gapY);
+      drawBits(ctx, y.art.bits, x, yy, scale, y.art.on || ON);
+
+      ctx.fillStyle = SOFT;
+      ctx.font = font(labelSize, '500');
+      ctx.textAlign = 'center';
+      // Class only while it fits; the id is the part that must always be there.
+      const full = `#${y.id} · ${y.class}`;
+      ctx.fillText(ctx.measureText(full).width <= size + gapX - 6 ? full : `#${y.id}`, x + size / 2, yy + size + labelSize + 4);
+      ctx.textAlign = 'left';
+    });
+  }
+
+  const hidden = total - n;
+  const note = hidden > 0
+    ? `${lines.note ? `${lines.note} · ` : ''}${hidden} more not pictured`
+    : lines.note;
+
+  caption(ctx, W, { ...lines, note }, 52, 872);
   return canvas.toBuffer('image/png');
 }
 
@@ -301,7 +335,7 @@ export function renderJournalCard(c: JournalCard): Buffer {
   const W = 1000, H = 1000;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  chrome(ctx, W, H, 'personal log');
+  chrome(ctx, W, H, "captain's log");
 
   const scale = 8;
   const face = 40 * scale;

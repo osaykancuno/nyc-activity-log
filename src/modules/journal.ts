@@ -68,7 +68,9 @@ export async function runJournal(force = false): Promise<void> {
       `Afloat today: ${fmtInt(afloat)}`,
     ],
     // The card carries the entry, not the header - the header is the tweet's.
-    body: entry.text.split('\n').slice(3).filter((x) => x && !x.startsWith('Normie #')).join(' '),
+    // The tweet's first two lines are the log header and the byline; the card
+    // draws those as chrome, so the page carries the entry itself and nothing else.
+    body: entry.text.split('\n').slice(2).filter((x) => x && x !== '\u2693').join(' '),
     note: `${logDate(at)} · ${watchName(at)} watch · written by the keeper of this log`,
   });
 

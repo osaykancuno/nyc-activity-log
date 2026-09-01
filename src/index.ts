@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { createServer } from 'node:http';
 import { club, config, hasXCredentials, yoko } from './config';
 import { log } from './logger';
-import { initStore, budget, getState } from './store';
+import { initStore, budget, effectiveCeiling, getState } from './store';
 import { initFonts } from './render/card';
 import { classify } from './chain/classify';
 import { poll, resolveStartBlock } from './chain/watcher';
@@ -79,7 +79,9 @@ async function main(): Promise<void> {
   cursor = await resolveStartBlock();
   l.info(`starting at block ${cursor}`);
   const b = budget();
+  const ceiling = effectiveCeiling();
   l.info(`budget this month: $${b.usedUsd.toFixed(3)} of $${b.maxUsd} (${b.used}/${b.max} posts)`);
+  l.info(`ceiling: ${ceiling.posts} posts, bound by ${ceiling.boundBy} at $${config.costPerPostUsd} each. A busy month stops there.`);
 
   if (config.modules.watch) {
     cron.schedule(config.watchCronMorning, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });

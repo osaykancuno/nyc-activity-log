@@ -1,4 +1,4 @@
-import { yoko } from './config';
+import { club, yoko } from './config';
 import type { AgentFacts } from './api/agent';
 import { fmtInt, logDate, tweetLength, voiceViolations, watchName } from './util';
 
@@ -45,6 +45,9 @@ function hash(s: string): number {
 
 const hulls = (n: number): string => `${fmtInt(n)} hull${n === 1 ? '' : 's'}`;
 
+/** The mark every post in this log ends on. */
+const ANCHOR = '\u2693';
+
 function fill(line: string, f: DayFacts, a: AgentFacts): string {
   const map: Record<string, string> = {
     name: a.name,
@@ -62,6 +65,8 @@ function fill(line: string, f: DayFacts, a: AgentFacts): string {
     claimHulls: hulls(f.claims),
     saleHulls: hulls(f.moved),
     afloat: fmtInt(f.afloat),
+    date: logDate(f.at),
+    watch: watchName(f.at),
   };
   return line.replace(/\{(\w+)\}/g, (m, k: string) => map[k] ?? m);
 }
@@ -101,9 +106,9 @@ function pick(bank: keyof typeof yoko.lines, seed: string, recent: string[], f: 
 }
 
 /**
- * The entry. Room is given up in one order: the signature first (Yoko's numbers
- * are on the card anyway), then the closing thought. The opener never moves -
- * it is the one line carrying the day's figures.
+ * The entry. Room is given up in one order: the anchor first, then the closing
+ * thought. The opener never moves - it is the one line carrying the day's
+ * figures, and an entry without it would say nothing at all.
  */
 export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []): Entry {
   const bank = bankFor(f);
@@ -114,14 +119,15 @@ export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []):
 
   const opener = openerTpl ? fill(openerTpl, f, a) : `${hulls(f.claims)} afloat, ${hulls(f.moved)} moved.`;
   const close = closeTpl ? fill(closeTpl, f, a) : '';
-  const signature = fill(yoko.signature, f, a);
 
-  const head = [yoko.header, `Entry: ${logDate(f.at)}, ${watchName(f.at)} watch.`, ''];
+  // The club's own log header, the same one the watch prints, then the byline.
+  // The diary is a page of this log, not a second account keeping its own.
+  const head = [club.voice.header, fill(yoko.byline, f, a), ''];
 
   const candidates = [
-    [...head, opener, close, '', signature],
+    [...head, opener, close, '', ANCHOR],
     [...head, opener, close],
-    [...head, opener, '', signature],
+    [...head, opener, '', ANCHOR],
     [...head, opener],
   ]
     .map((lines) => lines.filter((x, i, arr) => !(x === '' && arr[i - 1] === '')).join('\n').replace(/\n{3,}/g, '\n\n').trim());

@@ -20,7 +20,7 @@ A community bot that reads the chain and the club's public CC0 API and writes wh
 | **F · Pedigree** | CLI | class weights of a forge set |
 | **G · Tide** | the club relay | a round opens: prize, cost, cap, close. It settles: winning hull, its weight against the whole entered fleet, the settle block and the draw hash |
 | **I · Forge** | relay phase + 10 hulls burned in one tx | arms itself when the club opens forging — no date to remember |
-| **J · Personal log** | 21:45 UTC, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
+| **J · Captain's log** | 21:45 UTC, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
 
 **Off, deliberately.** The Chandlery (H) is the one module with data and still no post. The relay publishes the catalogue fleet-wide, but a *purchase* is only visible through `/chandlery/{wallet}` — so the only way to log renames and flags would be to walk every holder's wallet. The club publishes no holder lists and neither does its log, so H stays dark until a hull-keyed route exists. Same rule kills `/regatta/leaderboard` and `/logbook/captain/{wallet}`: read by the site, never by this bot.
 

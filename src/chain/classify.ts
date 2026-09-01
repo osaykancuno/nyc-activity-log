@@ -84,6 +84,30 @@ export async function classify(g: TxGroup): Promise<ChainEvent[]> {
 
   if (price.byToken.size === 0) return out; // a transfer, not a sale. Silence.
 
+  // Blur can pay for a set without saying which hull got what. The total is
+  // still provable from the receipt, and a sweep post prints only the total -
+  // so it may go out, but exclusively when one captain took every paid hull.
+  // With two buyers there is no honest way to split it, and the log says nothing.
+  if (price.source === 'blur-total') {
+    const buyers = new Set(moves.map((m) => m.to.toLowerCase()));
+    if (buyers.size !== 1 || moves.length < config.sweepMin || !config.modules.sweep) {
+      l.warn(`${g.txHash}: blur total across ${buyers.size} buyer(s) and ${moves.length} hull(s) - not publishable`);
+      return out;
+    }
+    if (ethNumber(price.total) < config.minSaleEth) return out;
+    out.push({
+      kind: 'sweep',
+      key: `sweep:${g.txHash}:${moves[0]!.to}`,
+      txHash: g.txHash, blockNumber: g.blockNumber, at: g.timestamp,
+      tokenIds: moves.map((m) => Number(m.tokenId)).sort((a, b) => a - b),
+      from: moves[0]!.from, to: moves[0]!.to,
+      priceWei: price.total,
+      marketplace: price.marketplace, priceSource: price.source, currency: price.currency,
+      priority: 90,
+    });
+    return out;
+  }
+
   // Group paid hulls by buyer: same buyer + same tx + N hulls = one sweep post.
   const byBuyer = new Map<string, { ids: bigint[]; from: `0x${string}` }>();
   for (const m of moves) {

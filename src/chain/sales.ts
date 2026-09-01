@@ -5,7 +5,7 @@ import { log } from '../logger';
 
 const l = log('sales');
 
-export type PriceSource = 'seaport' | 'blur' | 'tx-value' | 'none';
+export type PriceSource = 'seaport' | 'blur' | 'blur-total' | 'tx-value' | 'none';
 
 export type Currency = 'ETH' | 'WETH';
 
@@ -127,9 +127,17 @@ function fromBlur(receipt: TransactionReceipt, tokenIds: bigint[]): PriceInfo {
     total = ours.reduce((s, p) => s + p, 0n);
     byToken.set(tokenIds[0], total);
   } else {
-    // Cannot attribute a price to a specific hull. Say nothing rather than guess.
-    l.warn(`blur: ${ours.length} executions vs ${tokenIds.length} hulls in ${receipt.transactionHash} — price withheld`);
-    return EMPTY;
+    // Executions and hulls do not line up, so no hull can be given a price of
+    // its own - but the sum is not a guess: it is every Blur execution for this
+    // collection in this receipt. A sweep post prints the total and never a
+    // per-hull price, so classify() is allowed to publish it, and only in the
+    // one case where the total is honest: a single captain taking them all.
+    const sum = ours.reduce((s, p) => s + p, 0n);
+    if (sum === 0n) return EMPTY;
+    l.warn(`blur: ${ours.length} executions vs ${tokenIds.length} hulls in ${receipt.transactionHash} - per-hull price withheld, total kept`);
+    const unattributed = new Map<bigint, bigint>();
+    for (const id of tokenIds) unattributed.set(id, 0n);
+    return { byToken: unattributed, total: sum, source: 'blur-total', marketplace: 'Blur', currency: 'ETH' };
   }
 
   return { byToken, total, source: 'blur', marketplace: 'Blur', currency: 'ETH' };

@@ -4,8 +4,8 @@ import { log } from '../logger';
 import { enqueue } from '../poster';
 import { renderFleetCard, renderYachtCard } from '../render/card';
 import { claimPost, forgePost, salePost, sweepPost } from '../templates';
-import { classBreakdown, fmtEth, shortAddr, who } from '../util';
-import { resolveYacht, resolveYachts } from '../yacht';
+import { classBreakdown, fmtEth, fmtInt, shortAddr, who } from '../util';
+import { resolveFleet, resolveYacht } from '../yacht';
 
 const l = log('events');
 
@@ -58,41 +58,45 @@ async function onSale(ev: ChainEvent): Promise<void> {
 }
 
 async function onSweep(ev: ChainEvent): Promise<void> {
-  const yachts = await resolveYachts([...ev.tokenIds].sort((a, b) => a - b));
+  // The ids are the chain's answer and the count on the card comes from them,
+  // so a twenty-hull sweep announces twenty whatever the club CDN managed.
+  const ids = [...ev.tokenIds].sort((a, b) => a - b);
+  const { yachts, missing } = await resolveFleet(ids);
   const toEns = await ensName(ev.to);
   const price = ev.priceWei ?? 0n;
 
   const media = renderFleetCard(yachts, 'sweep', {
-    title: `${yachts.length}x Sweep`,
-    subtitle: classBreakdown(yachts.map((y) => y.class)),
+    title: `${fmtInt(ids.length)}x Sweep`,
+    subtitle: missing.length ? '' : classBreakdown(yachts.map((y) => y.class)),
     note: `\u2192 ${who(ev.to, toEns)}`,
     right: fmtEth(price, ev.currency ?? 'ETH'),
-  });
+  }, ids.length);
 
   enqueue({
     key: ev.key,
     kind: 'sweep',
-    text: sweepPost(yachts, price, { addr: ev.to, ens: toEns }, ev.blockNumber, ev.marketplace ?? '', ev.currency ?? 'ETH'),
+    text: sweepPost(ids, yachts, price, { addr: ev.to, ens: toEns }, ev.blockNumber, ev.marketplace ?? '', ev.currency ?? 'ETH'),
     media,
     priority: ev.priority,
   });
 }
 
 async function onForge(ev: ChainEvent): Promise<void> {
-  const yachts = await resolveYachts(ev.tokenIds);
+  const ids = [...ev.tokenIds].sort((a, b) => a - b);
+  const { yachts, missing } = await resolveFleet(ids);
   const ens = await ensName(ev.from);
 
   const media = renderFleetCard(yachts, 'forge', {
-    title: `${yachts.length} hulls burned`,
-    subtitle: classBreakdown(yachts.map((y) => y.class)),
+    title: `${fmtInt(ids.length)} hulls burned`,
+    subtitle: missing.length ? '' : classBreakdown(yachts.map((y) => y.class)),
     note: `by ${who(ev.from, ens)} \u00b7 ${shortAddr(ev.txHash)}`,
     right: 'island',
-  });
+  }, ids.length);
 
   enqueue({
     key: ev.key,
     kind: 'forge',
-    text: forgePost(yachts, { addr: ev.from, ens }, ev.blockNumber),
+    text: forgePost(ids, yachts, { addr: ev.from, ens }, ev.blockNumber),
     media,
     priority: ev.priority,
   });

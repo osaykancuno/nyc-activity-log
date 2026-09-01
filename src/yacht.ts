@@ -40,10 +40,63 @@ export async function resolveYacht(id: number): Promise<Yacht> {
 
 export async function resolveYachts(ids: number[]): Promise<Yacht[]> {
   const out: Yacht[] = [];
-  for (let i = 0; i < ids.length; i += 4) {
-    out.push(...(await Promise.all(ids.slice(i, i + 4).map(resolveYacht))));
+  for (let i = 0; i < ids.length; i += BATCH) {
+    out.push(...(await Promise.all(ids.slice(i, i + BATCH).map(resolveYacht))));
   }
   return out;
+}
+
+/**
+ * Six at a time. The club API is a CDN and the RPC transport batches whatever
+ * lands in the same tick, so a twenty-hull sweep is four round trips, not
+ * twenty - while still being a polite number of open sockets.
+ */
+const BATCH = 6;
+
+export interface ResolvedFleet {
+  yachts: Yacht[];
+  /** Hulls whose metadata could not be read, even after a retry. */
+  missing: number[];
+}
+
+/**
+ * A whole sweep, resolved without an all-or-nothing promise.
+ *
+ * `resolveYachts` throws if a single hull fails, which is right for the CLI and
+ * wrong for a twenty-hull sweep: one CDN hiccup would have cost the post
+ * entirely. Here every hull is tried, the stragglers are tried again, and what
+ * survives comes back beside a list of what did not.
+ *
+ * Nothing essential to a sweep post lives in this data anyway - how many hulls,
+ * which ids, what was paid, by whom, in which block all come from the receipt.
+ * Metadata only adds the class breakdown and the pictures, so an incomplete
+ * read costs a line and some art, never the post.
+ */
+export async function resolveFleet(ids: number[]): Promise<ResolvedFleet> {
+  const found = new Map<number, Yacht>();
+
+  for (const attempt of [0, 1]) {
+    const todo = ids.filter((id) => !found.has(id));
+    if (!todo.length) break;
+    if (attempt) {
+      l.warn(`retrying ${todo.length} hull(s) the first pass could not read: ${todo.join(', ')}`);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    for (let i = 0; i < todo.length; i += BATCH) {
+      const slice = todo.slice(i, i + BATCH);
+      const settled = await Promise.allSettled(slice.map(resolveYacht));
+      settled.forEach((r, k) => {
+        if (r.status === 'fulfilled') found.set(slice[k]!, r.value);
+        else l.debug(`#${slice[k]} unreadable`, r.reason);
+      });
+    }
+  }
+
+  const missing = ids.filter((id) => !found.has(id));
+  if (missing.length) l.error(`${missing.length} of ${ids.length} hull(s) stayed unreadable: ${missing.join(', ')}. The post goes out without them.`);
+
+  return { yachts: ids.map((id) => found.get(id)).filter((y): y is Yacht => Boolean(y)), missing };
 }
 
 const TRAIT_KEY: Record<string, string> = {

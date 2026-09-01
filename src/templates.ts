@@ -59,7 +59,17 @@ export function salePost(
   );
 }
 
+/**
+ * A sweep. The hull ids, the count and the total all come from the receipt, so
+ * they are printed whatever the metadata did: `yachts` may be short of `ids`
+ * when the club API could not be read for one of them, and the class breakdown
+ * is then dropped rather than published half true.
+ *
+ * A whale can take twenty hulls in one transaction, and twenty ids do fit - but
+ * the list is what gives ground first if a bigger one ever comes.
+ */
 export function sweepPost(
+  ids: number[],
   yachts: Yacht[],
   totalWei: bigint,
   to: { addr: string; ens: string | null },
@@ -67,18 +77,30 @@ export function sweepPost(
   marketplace: string,
   currency = 'ETH',
 ): string {
-  const ids = yachts.map((y) => `#${y.id}`).join(' ');
-  return truncateTweet(
-    [
-      `${yachts.length}x Yacht Sweep.`,
-      ids,
-      `${fmtEth(totalWei, currency)} total \u00b7 ${classBreakdown(yachts.map((y) => y.class))}`,
+  const complete = yachts.length === ids.length && yachts.length > 0;
+  const priceLine = complete
+    ? `${fmtEth(totalWei, currency)} total \u00b7 ${classBreakdown(yachts.map((y) => y.class))}`
+    : `${fmtEth(totalWei, currency)} total`;
+
+  const build = (shownIds: number): string => {
+    const shown = ids.slice(0, shownIds);
+    const rest = ids.length - shown.length;
+    return [
+      `${fmtInt(ids.length)}x Yacht Sweep.`,
+      shown.map((i) => `#${i}`).join(' ') + (rest > 0 ? ` +${rest} more` : ''),
+      priceLine,
       '',
       `\u2192 ${who(to.addr, to.ens)}`,
       `Block ${fmtBlock(blockNumber)}${marketplace ? ` \u00b7 ${marketplace}` : ''}`,
       '\u2693',
-    ].join('\n'),
-  );
+    ].join('\n');
+  };
+
+  for (let shown = ids.length; shown >= 4; shown--) {
+    const candidate = build(shown);
+    if (tweetLength(candidate) <= 272) return candidate;
+  }
+  return truncateTweet(build(4));
 }
 
 export interface WatchNumbers {
@@ -181,13 +203,20 @@ export function pedigreePost(p: PedigreeResult): string {
   return truncateTweet(lines.join('\n'));
 }
 
-export function forgePost(yachts: Yacht[], owner: { addr: string; ens: string | null }, blockNumber: bigint): string {
+export function forgePost(
+  ids: number[],
+  yachts: Yacht[],
+  owner: { addr: string; ens: string | null },
+  blockNumber: bigint,
+): string {
   const p = pedigree(yachts);
+  const complete = yachts.length === ids.length && yachts.length > 0;
   return truncateTweet(
     [
       'An island is forged.',
-      `${yachts.length} hulls burned by ${who(owner.addr, owner.ens)}.`,
-      `${p.breakdown} \u00b7 weight ${p.weight}`,
+      `${ids.length} hulls burned by ${who(owner.addr, owner.ens)}.`,
+      // Weight is a sum. Publishing it a hull short would understate it.
+      ...(complete ? [`${p.breakdown} \u00b7 weight ${p.weight}`] : []),
       '',
       `Fleet net ${club.islands.netSupplyChange}.`,
       `Block ${fmtBlock(blockNumber)}.`,
