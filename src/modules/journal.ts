@@ -32,7 +32,7 @@ const l = log('journal');
 export async function runJournal(force = false): Promise<void> {
   const j = getJournal();
   const at = new Date();
-  const day = j.day ?? at.toISOString().slice(0, 10);
+  const day = at.toISOString().slice(0, 10);
 
   if (!force && j.lastEntryDay === day) {
     l.info(`the entry for ${day} is already written`);

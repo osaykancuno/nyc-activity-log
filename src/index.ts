@@ -21,6 +21,23 @@ let cursor = 0n;
 let stopping = false;
 let consecutiveErrors = 0;
 
+/**
+ * How far the scheduling zone is from UTC right now. Printed beside every cron
+ * so a deploy log answers "what time is that really?" without arithmetic - and
+ * so the hour after a clock change is visibly the same local hour, not a bug.
+ */
+function offsetNote(): string {
+  try {
+    const now = new Date();
+    const local = new Date(now.toLocaleString('en-US', { timeZone: config.cronTz }));
+    const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const hours = Math.round((local.getTime() - utc.getTime()) / 3_600_000);
+    return `(UTC${hours >= 0 ? '+' : ''}${hours} today)`;
+  } catch {
+    return '';
+  }
+}
+
 function banner(): void {
   const entries = Object.entries(config.modules);
   const on = entries.filter(([, v]) => v).map(([k, v]) => (v === 'auto' ? `${k}(auto)` : k));
@@ -84,14 +101,14 @@ async function main(): Promise<void> {
   l.info(`ceiling: ${ceiling.posts} posts, bound by ${ceiling.boundBy} at $${config.costPerPostUsd} each. A busy month stops there.`);
 
   if (config.modules.watch) {
-    cron.schedule(config.watchCronMorning, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });
-    cron.schedule(config.watchCronEvening, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: 'UTC' });
-    l.info(`watch scheduled: "${config.watchCronMorning}" and "${config.watchCronEvening}" UTC`);
+    cron.schedule(config.watchCronMorning, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: config.cronTz });
+    cron.schedule(config.watchCronEvening, () => { void runWatch().catch((e) => l.error('watch failed', e)); }, { timezone: config.cronTz });
+    l.info(`watch scheduled: "${config.watchCronMorning}" and "${config.watchCronEvening}" ${config.cronTz} ${offsetNote()}`);
   }
 
   if (config.modules.journal) {
-    cron.schedule(config.journalCron, () => { void runJournal().catch((e) => l.error('journal failed', e)); }, { timezone: 'UTC' });
-    l.info(`Yoko's entry scheduled: "${config.journalCron}" UTC (agent #${yoko.agent.agentId}, Normie #${yoko.agent.tokenId})`);
+    cron.schedule(config.journalCron, () => { void runJournal().catch((e) => l.error('journal failed', e)); }, { timezone: config.cronTz });
+    l.info(`Yoko's entry scheduled: "${config.journalCron}" ${config.cronTz} ${offsetNote()} (agent #${yoko.agent.agentId}, Normie #${yoko.agent.tokenId})`);
   }
 
   if (config.modules.tide) {

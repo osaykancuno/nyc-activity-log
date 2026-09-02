@@ -25,7 +25,8 @@
     "tools:x": "node scripts/x-diag.mjs",
     "tools:soul": "tsx scripts/soul-check.mjs",
     "tools:xlimit": "tsx scripts/x-limit-check.mjs",
-    "tools:sales-split": "tsx scripts/sales-split-check.mjs"
+    "tools:sales-split": "tsx scripts/sales-split-check.mjs",
+    "tools:watch": "tsx scripts/watch-check.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.60",

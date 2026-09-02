@@ -108,10 +108,22 @@ export const config = {
    * carries the lot, which is what a budget is.
    */
   sweepMin: Math.max(2, num('SWEEP_MIN', 5)),
-  watchCronMorning: str('WATCH_CRON_MORNING', '30 5 * * *'),
-  watchCronEvening: str('WATCH_CRON_EVENING', '30 18 * * *'),
-  /** End of the first watch: the day is done, and Yoko writes it up. */
-  journalCron: str('JOURNAL_CRON', '45 21 * * *'),
+  /*
+   * The schedule runs on European clock time, not on fixed UTC.
+   *
+   * The club's log keeps UTC in its content - a ship's log always has - but the
+   * people reading it are on European time, and a post tuned to 21:00 in Rome
+   * would quietly slide to 22:00 the day the clocks change. Naming the zone
+   * instead of the offset keeps the hour where it was put, in March and in
+   * October alike.
+   */
+  cronTz: str('CRON_TZ', 'Europe/Rome'),
+  /** Morning: people are awake and on their phones, before the desk swallows them. */
+  watchCronMorning: str('WATCH_CRON_MORNING', '0 9 * * *'),
+  /** Evening peak, the busiest hour of the European day on this platform. */
+  watchCronEvening: str('WATCH_CRON_EVENING', '0 19 * * *'),
+  /** The day is done and the timeline is still awake: Yoko writes it up. */
+  journalCron: str('JOURNAL_CRON', '0 21 * * *'),
   /** Write an entry even on a day when nothing at all happened. */
   journalOnQuietDays: bool('JOURNAL_ON_QUIET_DAYS', true),
 

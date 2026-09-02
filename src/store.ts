@@ -19,7 +19,7 @@ export interface State {
   monthKey: string | null;       // "2026-09"
   monthCount: number;
   monthUsd: number;
-  lastWatch: { at: string; afloat: number; fleet: number; unclaimed: number } | null;
+  lastWatch: { at: string; afloat: number; fleet: number; unclaimed: number; block?: string } | null;
   journal: Journal;
   startedAt: string;
 }
@@ -111,11 +111,18 @@ export function setLastWatch(w: State['lastWatch']): void {
 
 const utcDay = (d = new Date()): string => d.toISOString().slice(0, 10);
 
-/** A new UTC day wipes the counters. Yoko's entry closes the old one first. */
+/*
+ * The tally covers everything since Yoko last wrote, not a UTC calendar day.
+ *
+ * It used to reset at UTC midnight, which was fine while she wrote at 21:45
+ * UTC. Writing at 21:00 European time means 19:00 UTC in summer, and a
+ * calendar reset would have quietly dropped the last five hours of every day
+ * out of the page that claims to describe it. "Since the last entry" needs no
+ * timezone at all, and is what a diary means anyway.
+ */
 function rollJournalDay(): void {
-  const day = utcDay();
-  if (state.journal.day !== day) {
-    state.journal = { ...emptyJournal(day), lastEntryDay: state.journal.lastEntryDay, recent: state.journal.recent };
+  if (state.journal.day === null) {
+    state.journal.day = utcDay();
     persistState();
   }
 }
@@ -140,11 +147,14 @@ export function getJournal(): Readonly<Journal> {
   return state.journal;
 }
 
-/** The entry is written: remember the lines used and stop the day. */
+/** The entry is written: remember the lines used and start the count again. */
 export function closeJournalDay(used: string[]): void {
-  rollJournalDay();
-  state.journal.lastEntryDay = state.journal.day;
-  state.journal.recent = [...used, ...state.journal.recent.filter((r) => !used.includes(r))].slice(0, RECENT_KEPT);
+  const today = utcDay();
+  state.journal = {
+    ...emptyJournal(today),
+    lastEntryDay: today,
+    recent: [...used, ...state.journal.recent.filter((r) => !used.includes(r))].slice(0, RECENT_KEPT),
+  };
   persistState();
 }
 

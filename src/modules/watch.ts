@@ -47,11 +47,19 @@ export async function runWatch(force = false): Promise<void> {
   const prev = getState().lastWatch;
   const deltaAfloat = prev ? afloat - prev.afloat : null;
 
-  if (!force && prev && deltaAfloat === 0 && prev.fleet === fleet) {
-    l.info('nothing moved since the last watch - staying quiet');
-    setLastWatch({ at: new Date().toISOString(), afloat, fleet, unclaimed });
-    return;
-  }
+  /*
+   * The watch is kept twice a day whether or not the fleet moved. It used to
+   * fall silent on a still day, which was honest and also made the log vanish
+   * for days at a stretch - a watch kept only on busy days is not a watch.
+   *
+   * What keeps it from reading as the same post twice is that a still day is
+   * written as a different one: it leads with how far the chain travelled while
+   * nothing changed hands, which is a figure nobody has seen before and one
+   * anyone can check.
+   */
+  const blocksSince = prev?.block ? block - BigInt(prev.block) : null;
+  const still = !!prev && deltaAfloat === 0 && prev.fleet === fleet;
+  if (still) l.info(`nothing moved since the last watch - logging the ${blocksSince ?? '?'} blocks that passed anyway`);
 
   const at = new Date();
 
@@ -83,6 +91,12 @@ export async function runWatch(force = false): Promise<void> {
     chips = undefined;
   }
 
+  // The note carries the standing detail rather than a fifth row: five rows
+  // would run the bar and the chips into the caption.
+  const note = still && blocksSince
+    ? `${fmtInt(Number(blocksSince))} blocks since the last watch \u00b7 totalMinted() at ${fmtInt(Number(block))}`
+    : `totalMinted() at block ${fmtInt(Number(block))} \u00b7 verify it yourself`;
+
   const media = renderWatchCard(
     [
       ['Afloat', fmtInt(afloat)],
@@ -92,17 +106,17 @@ export async function runWatch(force = false): Promise<void> {
     ],
     `${watchName(at)} watch`,
     logDate(at),
-    `totalMinted() at block ${fmtInt(Number(block))} \u00b7 verify it yourself`,
+    note,
     { bar: { label: 'Claimed', value: afloat, total: fleet }, chips, subtitle: season ?? undefined },
   );
 
   enqueue({
     key: force ? `watch:forced:${Date.now()}` : `watch:${at.toISOString().slice(0, 13)}`,
     kind: 'watch',
-    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season }, at),
+    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season, blocksSince }, at),
     media,
     priority: 50,
   });
 
-  setLastWatch({ at: at.toISOString(), afloat, fleet, unclaimed });
+  setLastWatch({ at: at.toISOString(), afloat, fleet, unclaimed, block: block.toString() });
 }

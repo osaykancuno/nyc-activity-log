@@ -112,10 +112,30 @@ export interface WatchNumbers {
   block: bigint;
   /** e.g. "The Reckoning Regatta, day 9 of 21" - dropped if the post would not fit. */
   regatta?: string | null;
+  /** Blocks since the previous watch. Null on the first watch of a new state file. */
+  blocksSince?: bigint | null;
 }
 
+/**
+ * The watch, twice a day, whatever happened.
+ *
+ * It used to stay silent when the numbers had not moved, which kept the log
+ * honest and also made it disappear for days at a time. It posts either way
+ * now - but a still watch is written as a different post, not the same one
+ * again, because leading with three unchanged figures is what made it read as
+ * a repeat.
+ *
+ * The honest difference is that something did move: the chain. A still watch
+ * leads with how far it went, which is a number nobody has seen before and one
+ * anyone can check.
+ */
 export function watchPost(n: WatchNumbers, at: Date): string {
-  const delta = n.deltaAfloat === null ? '' : n.deltaAfloat === 0 ? ' (unchanged)' : ` (+${fmtInt(n.deltaAfloat)})`;
+  const still = n.deltaAfloat === 0 && n.fleet > 0 && n.blocksSince != null && n.blocksSince > 0n;
+  return still ? stillWatch(n, at) : movingWatch(n, at);
+}
+
+function movingWatch(n: WatchNumbers, at: Date): string {
+  const delta = n.deltaAfloat === null ? '' : n.deltaAfloat === 0 ? '' : ` (+${fmtInt(n.deltaAfloat)})`;
   const fleetLabel = n.burnedFromChain ? 'Born from burns' : 'Fleet on record';
 
   const build = (season: boolean, invite: boolean): string =>
@@ -136,6 +156,29 @@ export function watchPost(n: WatchNumbers, at: Date): string {
 
   // Room is given up in this order: the invitation to check first (it is manners),
   // then the season (it is context). The numbers and the sign-off never move.
+  for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
+    if (tweetLength(candidate) <= 272) return candidate;
+  }
+  return truncateTweet(build(false, false), 272);
+}
+
+/** Nothing changed hands. Say what did, and say the standing figures once. */
+function stillWatch(n: WatchNumbers, at: Date): string {
+  const build = (season: boolean, invite: boolean): string =>
+    [
+      club.voice.header,
+      logEntryLine(at),
+      '',
+      `No hull moved in ${fmtBlock(n.blocksSince!)} blocks.`,
+      `Afloat ${fmtInt(n.afloat)} \u00b7 awaiting claim ${fmtInt(n.unclaimed)}`,
+      ...(season && n.regatta ? [n.regatta] : []),
+      '',
+      `Read at block ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
+      '',
+      club.voice.footer[0],
+      club.voice.footer[1],
+    ].join('\n');
+
   for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
     if (tweetLength(candidate) <= 272) return candidate;
   }
