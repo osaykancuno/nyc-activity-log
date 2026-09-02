@@ -23,7 +23,7 @@ export async function resolveYacht(id: number): Promise<Yacht> {
     return fromChain(id);
   }
 
-  if (config.artSource !== 'chain') return api;
+  if (config.artSource !== 'chain') return { ...api, art: { ...api.art, from: 'api' } };
 
   // Rank and class come from the club; the picture comes from the contract.
   // They agree for almost every hull - but not all of them, and tokenURI is
@@ -33,8 +33,8 @@ export async function resolveYacht(id: number): Promise<Yacht> {
     if (chain.art.bits !== api.art.bits) l.info(`#${id}: on-chain art differs from the API snapshot - using the chain`);
     return { ...api, art: chain.art };
   } catch (e) {
-    l.debug(`#${id}: tokenURI unavailable, keeping the API art`, e);
-    return api;
+    l.warn(`#${id}: tokenURI unavailable, falling back to the API snapshot for the picture`, e);
+    return { ...api, art: { ...api.art, from: 'api' } };
   }
 }
 
@@ -134,7 +134,7 @@ export async function fromChain(id: number): Promise<Yacht> {
     anchorPointsPerDay: club.classes[cls]?.anchorPointsPerDay ?? 0,
     rarityRank: null,
     traits,
-    art: { size: 40, on, off, onPixels: (bits.match(/1/g) ?? []).length, bits },
+    art: { size: 40, on, off, onPixels: (bits.match(/1/g) ?? []).length, bits, from: 'chain' },
     source: 'chain',
   };
 }

@@ -101,7 +101,13 @@ export const config = {
   artSource: (str('ART_SOURCE', 'chain') === 'api' ? 'api' : 'chain') as 'api' | 'chain',
 
   minSaleEth: num('MIN_SALE_ETH', 0),
-  sweepMin: Math.max(2, num('SWEEP_MIN', 2)),
+  /**
+   * Hulls to one captain in one transaction, at or above which the log stops
+   * writing an entry per hull and writes a single sweep instead. Below it every
+   * hull gets its own post - which is what a log is - and above it one post
+   * carries the lot, which is what a budget is.
+   */
+  sweepMin: Math.max(2, num('SWEEP_MIN', 5)),
   watchCronMorning: str('WATCH_CRON_MORNING', '30 5 * * *'),
   watchCronEvening: str('WATCH_CRON_EVENING', '30 18 * * *'),
   /** End of the first watch: the day is done, and Yoko writes it up. */

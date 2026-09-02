@@ -57,7 +57,8 @@ async function verify(): Promise<void> {
   console.log(`  contract      ok   totalMinted() = ${fmtInt(Number(minted))} (${fmtInt(stats.yachts - Number(minted))} awaiting claim)`);
 
   const y = await resolveYacht(1709);
-  console.log(`  metadata      ok   #${y.id} ${y.class}, art ${y.art.onPixels} lit pixels, source ${y.source}`);
+  console.log(`  metadata      ok   #${y.id} ${y.class}, facts from the ${y.source === 'chain' ? 'contract' : 'club API'}`);
+  console.log(`  art           ${y.art.from === 'chain' ? 'ok  ' : '--  '} ${y.art.onPixels} lit pixels, drawn from the ${y.art.from === 'chain' ? "contract's own tokenURI" : 'club API snapshot'} (ART_SOURCE=${config.artSource})`);
 
   const health = await relayHealth();
   if (health) {

@@ -2,9 +2,9 @@ import { config } from '../config';
 import { runtime } from '../runtime';
 import { log } from '../logger';
 import { isZero, ethNumber } from '../util';
-import { priceFromReceipt, type Currency, type PriceSource } from './sales';
+import { priceFromReceipt, type Currency, type PriceInfo, type PriceSource } from './sales';
 import { publicClient } from './client';
-import type { TxGroup } from './watcher';
+import type { TransferRow, TxGroup } from './watcher';
 
 const l = log('classify');
 
@@ -108,38 +108,83 @@ export async function classify(g: TxGroup): Promise<ChainEvent[]> {
     return out;
   }
 
-  // Group paid hulls by buyer: same buyer + same tx + N hulls = one sweep post.
-  const byBuyer = new Map<string, { ids: bigint[]; from: `0x${string}` }>();
+  out.push(...salesFrom(g, moves, price));
+  return out;
+}
+
+/**
+ * Who bought what, and whether each hull earns its own entry.
+ *
+ * Pure on purpose. Everything above needs a receipt from the chain; this is the
+ * part that decides what the timeline actually looks like, so it is testable on
+ * its own - `npm run tools:sales-split` covers it.
+ *
+ * A log records hulls, not baskets. Two or three yachts taken in one
+ * transaction are two or three things that happened, and each gets its own
+ * entry with its own hull, its own seller and its own price. The single sweep
+ * post exists for where that stops being true: a captain taking SWEEP_MIN hulls
+ * at once is one event, and posting it as twenty would flood the timeline and
+ * cost twenty times as much. That threshold is the only thing separating a log
+ * from a bill.
+ */
+export function salesFrom(
+  g: Pick<TxGroup, 'txHash' | 'blockNumber' | 'timestamp'>,
+  moves: TransferRow[],
+  price: PriceInfo,
+): ChainEvent[] {
+  const out: ChainEvent[] = [];
+
+  const byBuyer = new Map<string, { id: bigint; from: `0x${string}` }[]>();
   for (const m of moves) {
     if (!price.byToken.has(m.tokenId)) continue;
-    const e = byBuyer.get(m.to) ?? { ids: [], from: m.from };
-    e.ids.push(m.tokenId);
+    const e = byBuyer.get(m.to) ?? [];
+    e.push({ id: m.tokenId, from: m.from });
     byBuyer.set(m.to, e);
   }
 
-  for (const [to, { ids, from }] of byBuyer) {
+  for (const [to, bought] of byBuyer) {
+    const items = [...bought].sort((x, y) => Number(x.id - y.id));
+
+    if (items.length < config.sweepMin) {
+      if (!config.modules.sale) continue;
+      for (const { id, from } of items) {
+        const paid = price.byToken.get(id)!;
+        if (ethNumber(paid) < config.minSaleEth) continue;
+        out.push({
+          kind: 'sale',
+          // The hull is part of the key: one transaction can now carry several.
+          key: `sale:${g.txHash}:${to}:${id}`,
+          txHash: g.txHash, blockNumber: g.blockNumber, at: g.timestamp,
+          tokenIds: [Number(id)],
+          from, to: to as `0x${string}`,
+          priceWei: paid,
+          marketplace: price.marketplace, priceSource: price.source, currency: price.currency,
+          priority: 70,
+        });
+      }
+      continue;
+    }
+
+    if (!config.modules.sweep) continue;
+
     const perToken = new Map<number, bigint>();
     let total = 0n;
-    for (const id of ids) {
-      const p = price.byToken.get(id)!;
-      perToken.set(Number(id), p);
-      total += p;
+    for (const { id } of items) {
+      const paid = price.byToken.get(id)!;
+      perToken.set(Number(id), paid);
+      total += paid;
     }
     if (ethNumber(total) < config.minSaleEth) continue;
 
-    const isSweep = ids.length >= config.sweepMin;
-    if (isSweep && !config.modules.sweep) continue;
-    if (!isSweep && !config.modules.sale) continue;
-
     out.push({
-      kind: isSweep ? 'sweep' : 'sale',
-      key: `${isSweep ? 'sweep' : 'sale'}:${g.txHash}:${to}`,
+      kind: 'sweep',
+      key: `sweep:${g.txHash}:${to}`,
       txHash: g.txHash, blockNumber: g.blockNumber, at: g.timestamp,
-      tokenIds: ids.map(Number).sort((a, b) => a - b),
-      from, to: to as `0x${string}`,
+      tokenIds: items.map((i) => Number(i.id)),
+      from: items[0]!.from, to: to as `0x${string}`,
       priceWei: total, pricePerToken: perToken,
       marketplace: price.marketplace, priceSource: price.source, currency: price.currency,
-      priority: isSweep ? 90 : 70,
+      priority: 90,
     });
   }
 

@@ -372,37 +372,21 @@ function fitNote(ctx: SKRSContext2D, note: string, W: number, y: number): void {
   ctx.fillText(text, 60, y);
 }
 
-/* ── The personal log (module J) ──────────────────────────────────────────
-   Not a data card. This one is a page: Yoko's own pixels on the left, who she
-   is beside them, and the entry itself set large underneath. The face is the
-   agent's real art from normies.art, in the same 40x40 grid the hulls use. */
+/* ── The captain's log (module J) ─────────────────────────────────────────
+   Not an echo of the tweet. Every other post here pairs its text with a card
+   that adds something - the watch prints captains and a claimed bar the words
+   never mention - and this one lost that when it simply restated the entry.
+
+   So the page carries the day's ledger, in the club's numbers, and the post
+   carries Yoko's reading of it. Two different things to look at. Her own
+   pixels stay on the card and out of the entry, one line, under her name. */
 
 export interface JournalCard {
   portrait: { bits: string; on: string } | null;
   name: string;
   identity: string;
-  stats: string[];
-  body: string;
+  rows: [string, string][];
   note: string;
-}
-
-/** Greedy wrap. Returns the lines, shrinking the face never the words. */
-function wrap(ctx: SKRSContext2D, text: string, max: number): string[] {
-  const out: string[] = [];
-  for (const para of text.split('\n')) {
-    let line = '';
-    for (const word of para.split(/\s+/).filter(Boolean)) {
-      const next = line ? `${line} ${word}` : word;
-      if (ctx.measureText(next).width > max && line) {
-        out.push(line);
-        line = word;
-      } else {
-        line = next;
-      }
-    }
-    out.push(line);
-  }
-  return out;
 }
 
 export function renderJournalCard(c: JournalCard): Buffer {
@@ -425,38 +409,13 @@ export function renderJournalCard(c: JournalCard): Buffer {
   const tx = c.portrait ? 60 + face + 44 : 60;
   ctx.fillStyle = INK;
   ctx.font = font(46, '600');
-  ctx.fillText(c.name, tx, top + 54);
+  ctx.fillText(c.name, tx, top + 150);
 
   ctx.fillStyle = GOLD_DIM;
-  ctx.font = font(24, '500');
-  ctx.fillText(c.identity, tx, top + 92);
+  ctx.font = font(23, '500');
+  ctx.fillText(c.identity, tx, top + 190);
 
-  let sy = top + 148;
-  for (const line of c.stats) {
-    ctx.fillStyle = SOFT;
-    ctx.font = font(23, '400');
-    ctx.fillText(line, tx, sy);
-    sy += 36;
-  }
-
-  // The entry itself, set in the space the portrait leaves, and centred in it -
-  // a short day and a long one should both look like a page rather than a
-  // caption stranded at the top of one.
   const ruleY = top + face + 44;
-  const areaTop = ruleY + 34;
-  const areaBottom = 892;
-
-  let size = 46;
-  let lines: string[] = [];
-  let lead = 0;
-  do {
-    ctx.font = font(size, '500');
-    lines = wrap(ctx, c.body, W - 120);
-    lead = size + 18;
-    if (lines.length * lead - (lead - size) <= areaBottom - areaTop) break;
-    size -= 2;
-  } while (size > 24);
-
   ctx.strokeStyle = 'rgba(61,61,61,0.18)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -464,14 +423,37 @@ export function renderJournalCard(c: JournalCard): Buffer {
   ctx.lineTo(W - 60, ruleY);
   ctx.stroke();
 
-  const blockH = lines.length * lead - (lead - size);
-  let by = areaTop + Math.max(0, (areaBottom - areaTop - blockH) / 2) + size;
+  // The ledger. Row height follows the count so four rows and six both sit
+  // in the same block rather than drifting into the note at the bottom.
+  const rows = c.rows.slice(0, 6);
+  if (rows.length) {
+    const areaTop = ruleY + 40;
+    const areaBottom = 880;
+    const rowH = Math.min(96, Math.floor((areaBottom - areaTop) / rows.length));
+    const labelSize = Math.max(22, Math.min(30, Math.round(rowH * 0.36)));
+    const valueSize = Math.max(30, Math.min(46, Math.round(rowH * 0.54)));
 
-  ctx.fillStyle = INK;
-  ctx.font = font(size, '500');
-  for (const line of lines) {
-    ctx.fillText(line, 60, by);
-    by += lead;
+    let y = areaTop + Math.round(rowH * 0.62);
+    for (const [k, v] of rows) {
+      ctx.fillStyle = SOFT;
+      ctx.font = font(labelSize, '400');
+      ctx.fillText(k, 60, y);
+
+      ctx.fillStyle = INK;
+      ctx.font = font(valueSize, '600');
+      ctx.textAlign = 'right';
+      ctx.fillText(v, W - 60, y);
+      ctx.textAlign = 'left';
+
+      ctx.strokeStyle = 'rgba(61,61,61,0.14)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(60, y + Math.round(rowH * 0.28));
+      ctx.lineTo(W - 60, y + Math.round(rowH * 0.28));
+      ctx.stroke();
+
+      y += rowH;
+    }
   }
 
   if (c.note) fitNote(ctx, c.note, W, 930);

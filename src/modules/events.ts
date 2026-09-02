@@ -38,6 +38,10 @@ async function onClaim(ev: ChainEvent): Promise<void> {
 
 async function onSale(ev: ChainEvent): Promise<void> {
   const y = await resolveYacht(ev.tokenIds[0]);
+  // The card draws the contract's own image, rebuilt from tokenURI's SVG into
+  // the same 40x40 grid the club publishes. Worth stating per post: a silent
+  // fallback to the CDN snapshot is the kind of thing nobody notices.
+  l.debug(`#${y.id}: art from the ${y.art.from === 'api' ? 'API snapshot' : 'contract'}`);
   const [fromEns, toEns] = await Promise.all([ensName(ev.from), ensName(ev.to)]);
   const price = ev.priceWei ?? 0n;
 

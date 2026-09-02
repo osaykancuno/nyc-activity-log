@@ -45,6 +45,19 @@ function hash(s: string): number {
 
 const hulls = (n: number): string => `${fmtInt(n)} hull${n === 1 ? '' : 's'}`;
 
+/**
+ * Words worth not hearing twice in three lines. Short words are ignored: an
+ * entry may say "the" as often as it likes, but an opener ending on "aboard"
+ * followed by a close ending on "aboard" reads like a stammer, and the banks
+ * are small enough that it happens.
+ */
+const echoes = (a: string, b: string): boolean => {
+  const words = (t: string) => new Set(t.toLowerCase().match(/[a-z]{6,}/g) ?? []);
+  const first = words(a);
+  for (const w of words(b)) if (first.has(w)) return true;
+  return false;
+};
+
 
 
 function fill(line: string, f: DayFacts, a: AgentFacts): string {
@@ -87,21 +100,32 @@ const forbidden = (text: string): boolean =>
  * skipping anything said recently, and skipping anything that trips the voice
  * guard once its numbers are in.
  */
-function pick(bank: keyof typeof yoko.lines, seed: string, recent: string[], f: DayFacts, a: AgentFacts): string | null {
+function pick(
+  bank: keyof typeof yoko.lines,
+  seed: string,
+  recent: string[],
+  f: DayFacts,
+  a: AgentFacts,
+  avoid = '',
+): string | null {
   const pool = yoko.lines[bank] ?? [];
   if (!pool.length) return null;
 
   const start = hash(`${seed}:${bank}`) % pool.length;
   const fresh: string[] = [];
   const stale: string[] = [];
+  const echoing: string[] = [];
 
   for (let i = 0; i < pool.length; i++) {
     const line = pool[(start + i) % pool.length]!;
-    if (forbidden(fill(line, f, a))) continue;
+    const text = fill(line, f, a);
+    if (forbidden(text)) continue;
+    if (avoid && echoes(avoid, text)) { echoing.push(line); continue; }
     (recent.includes(line) ? stale : fresh).push(line);
   }
-  // Everything said lately? Then say the oldest of them again rather than nothing.
-  return fresh[0] ?? stale[0] ?? null;
+  // Preferences in order: fresh, said-a-while-ago, and only then one that
+  // echoes the opener - which is still better than an entry with no close.
+  return fresh[0] ?? stale[0] ?? echoing[0] ?? null;
 }
 
 /**
@@ -115,9 +139,10 @@ export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []):
   const seed = `${f.at.toISOString().slice(0, 10)}:${f.claims}:${f.moved}:${f.tides}`;
 
   const openerTpl = pick(bank, seed, recent, f, a);
-  const closeTpl = pick('close', seed, recent, f, a);
-
   const opener = openerTpl ? fill(openerTpl, f, a) : `${hulls(f.claims)} afloat, ${hulls(f.moved)} moved.`;
+
+  // The close is chosen against the opener, not just against the last few days.
+  const closeTpl = pick('close', seed, recent, f, a, opener);
   const close = closeTpl ? fill(closeTpl, f, a) : '';
 
   // The club's own log header, the same one the watch prints, then the byline.

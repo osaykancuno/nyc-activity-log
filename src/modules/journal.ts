@@ -1,7 +1,9 @@
-import { config, yoko } from '../config';
+import { config } from '../config';
 import { log } from '../logger';
 import { getAgentFacts, getPortrait } from '../api/agent';
 import { totalMinted } from '../chain/client';
+import { getStats } from '../api/nyc';
+import { getRegatta } from '../api/relay';
 import { enqueue } from '../poster';
 import { renderJournalCard } from '../render/card';
 import { composeEntry, type DayFacts } from '../soul';
@@ -51,27 +53,51 @@ export async function runJournal(force = false): Promise<void> {
     l.warn('could not read totalMinted() for the entry - the line that needs it will be skipped', e);
   }
 
+  // The page is a log of the club, so the club's numbers carry it. Both of
+  // these are cached, and neither is worth failing an entry over.
+  let fleet = 0;
+  try {
+    fleet = (await getStats()).yachts;
+  } catch (e) {
+    l.debug('fleet size unavailable for the card', e);
+  }
+
+  let season: string | null = null;
+  try {
+    const sn = (await getRegatta())?.season;
+    if (sn && sn.status === 'active' && sn.day && sn.days) season = `${sn.name}, day ${sn.day} of ${sn.days}`;
+  } catch (e) {
+    l.debug('regatta unavailable for the card', e);
+  }
+
   const facts: DayFacts = { claims: j.claims, moved: j.moved, tides: j.tides, forges: j.forges, afloat, at };
   const agent = await getAgentFacts();
   const entry = composeEntry(facts, agent, [...j.recent]);
 
   l.info(`entry for ${day} (${entry.bank}): ${j.claims} claimed, ${j.moved} moved, ${j.tides} tide, agent numbers from ${agent.source}`);
 
+  // The ledger the entry is a reading of. Deliberately not the entry itself:
+  // the post says what the day amounted to, the card says what it was.
+  const rows: [string, string][] = [
+    ['Claimed today', fmtInt(j.claims)],
+    ['Changed hands', fmtInt(j.moved)],
+  ];
+  if (j.tides) rows.push(['Tide rounds', fmtInt(j.tides)]);
+  if (j.forges) rows.push(['Islands forged', fmtInt(j.forges)]);
+  rows.push(['Fleet afloat', fmtInt(afloat)]);
+  if (fleet > afloat) rows.push(['Awaiting claim', fmtInt(fleet - afloat)]);
+
   const portrait = await getPortrait();
   const media = renderJournalCard({
     portrait,
     name: `CAPTAIN ${agent.name.toUpperCase()}`,
-    identity: `Normie #${agent.tokenId} · agent #${agent.agentId} · ${yoko.agent.type}`,
-    stats: [
-      `Canvas level ${agent.level} · ${fmtInt(agent.actionPoints)} action points`,
-      `${agent.transformations} passes · +${agent.pixelsAdded} / −${agent.pixelsRemoved} pixels`,
-      `Afloat today: ${fmtInt(afloat)}`,
-    ],
-    // The card carries the entry, not the header - the header is the tweet's.
-    // The tweet's first two lines are the log header and the byline; the card
-    // draws those as chrome, so the page carries the entry itself and nothing else.
-    body: entry.text.split('\n').slice(2).filter((x) => x && x !== yoko.footer).join(' '),
-    note: `${logDate(at)} · ${watchName(at)} watch · written by the keeper of this log`,
+    // Her role first, her origin second. The entry is about the club; who keeps
+    // it is worth a byline, not a biography.
+    identity: `Keeper of the log \u00b7 Normie #${agent.tokenId}`,
+    rows,
+    note: season
+      ? `${logDate(at)} \u00b7 ${watchName(at)} watch \u00b7 ${season}`
+      : `${logDate(at)} \u00b7 ${watchName(at)} watch \u00b7 written by the keeper of this log`,
   });
 
   const queued = enqueue({

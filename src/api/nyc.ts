@@ -13,9 +13,15 @@ export interface Yacht {
   anchorPointsPerDay: number;
   rarityRank: number | null;
   traits: Record<string, string | number>;
-  art: { size: number; on: string; off: string; onPixels: number; bits: string };
+  art: {
+    size: number; on: string; off: string; onPixels: number; bits: string;
+    /** Where the picture itself came from - 'chain' is the contract's own tokenURI. */
+    from?: 'chain' | 'api';
+  };
   onchain?: { agent?: string };
-  /** Where the facts came from. 'chain' means the club API had not published this hull yet. */
+  /** Where the *facts* came from. 'chain' means the club API had not published this hull yet.
+   *  The picture is tracked separately in `art.from`: metadata and art can, and normally do,
+   *  come from different places. */
   source?: 'api' | 'chain';
 }
 

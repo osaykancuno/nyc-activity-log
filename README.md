@@ -14,7 +14,7 @@ The club's own bot. It reads the chain and the club's public CC0 API and writes 
 |---|---|---|
 | **A · Claim** | `Transfer` from `0x0` | *Yacht #n is afloat, born from the burn of Normie #m* + card |
 | **B · Sale** | `Transfer` with a proven payment | id, class, rank, price, seller → buyer (ENS or shortened) + card |
-| **C · Sweep** | N hulls to the same captain in one tx | one post, never N |
+| **C · Sweep** | `SWEEP_MIN` hulls or more to the same captain in one tx | one post, never N. Below the threshold each hull is its own entry, with its own seller and price |
 | **D · Lookup** | a mention containing `#1709` | one reply: traits and art, never an owner |
 | **E · Watch** | 05:30 and 18:30 UTC | afloat / fleet / awaiting claim / captains, the running Regatta season, and the block it was all read at |
 | **F · Pedigree** | CLI | class weights of a forge set |
@@ -107,7 +107,9 @@ data/yoko.json   the keeper: her identity, and every sentence she can publish
 ```bash
 npm run tools:sales    # recent secondary transfers, to test `cli tx` against real ones
 npm run tools:art      # compare the API bitmaps with the on-chain art
-npm run tools:soul     # 280 entries composed and checked: length, voice, placeholders
+npm run tools:soul     # entries composed and checked: length, voice, placeholders
+npm run tools:sales-split  # what the timeline looks like when N hulls move in one tx
+npm run tools:xlimit   # proves the character estimate never undercounts what X charges
 ```
 
 Two design points worth knowing:
