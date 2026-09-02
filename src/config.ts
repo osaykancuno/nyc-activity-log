@@ -58,8 +58,23 @@ const bool = (k: string, d: boolean): boolean => {
   const v = str(k);
   return v === '' ? d : /^(1|true|yes|on)$/i.test(v);
 };
+/**
+ * A missing number means the default, not zero.
+ *
+ * This read `Number(str(k))` and trusted `Number.isFinite`, and `Number('')` is
+ * 0 - which is finite. So an unset variable silently became 0 rather than the
+ * default written right next to it, and every default in this file was a lie
+ * unless the environment happened to set it.
+ *
+ * It hid because the deployment sets nearly all of them. The ones that would
+ * have bitten hardest are MONTHLY_BUDGET_USD and MAX_POSTS_PER_MONTH: at zero
+ * the poster considers the budget spent and drops every post, silently, for a
+ * month.
+ */
 const num = (k: string, d: number): number => {
-  const v = Number(str(k));
+  const raw = str(k);
+  if (raw === '') return d;
+  const v = Number(raw);
   return Number.isFinite(v) ? v : d;
 };
 

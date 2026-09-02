@@ -47,6 +47,17 @@ function banner(): void {
   l.info(`modules on : ${on.join(', ') || 'none'}`);
   l.info(`modules off: ${off.join(', ') || 'none'}`);
   l.info(`rpc: ${config.rpcUrls.map(redactUrl).join(' , ')}`);
+  l.info(`rules: sweep at ${config.sweepMin}+ hulls to one captain \u00b7 ${config.confirmations} confirmations \u00b7 poll ${Math.round(config.pollIntervalMs / 1000)}s \u00b7 min sale ${config.minSaleEth} ETH`);
+
+  // A zero here is almost always a variable that was deleted rather than a
+  // choice. Two of them stop the account posting altogether, so they are named.
+  const nonsense = Object.entries({
+    MONTHLY_BUDGET_USD: config.monthlyBudgetUsd,
+    MAX_POSTS_PER_MONTH: config.maxPostsPerMonth,
+    COST_PER_POST_USD: config.costPerPostUsd,
+    CONFIRMATIONS: Number(config.confirmations),
+  }).filter(([, v]) => !v);
+  if (nonsense.length) l.error(`these are zero and should not be: ${nonsense.map(([k]) => k).join(', ')}. Nothing will be posted until they are set.`);
   if (!config.dryRun && !hasXCredentials()) l.warn('LIVE mode without X credentials \u2014 posts will fail. Set the four X_* values.');
 }
 
