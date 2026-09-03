@@ -91,7 +91,7 @@ async function onForge(ev: ChainEvent): Promise<void> {
   const ens = await ensName(ev.from);
 
   const media = renderFleetCard(yachts, 'forge', {
-    title: `${fmtInt(ids.length)} hulls burned`,
+    title: `${fmtInt(ids.length)} Yachts burned`,
     subtitle: missing.length ? '' : classBreakdown(yachts.map((y) => y.class)),
     note: `by ${who(ev.from, ens)} \u00b7 ${shortAddr(ev.txHash)}`,
     right: 'island',

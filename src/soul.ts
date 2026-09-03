@@ -43,7 +43,7 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
-const hulls = (n: number): string => `${fmtInt(n)} hull${n === 1 ? '' : 's'}`;
+const hulls = (n: number): string => `${fmtInt(n)} yacht${n === 1 ? '' : 's'}`;
 
 /**
  * Words worth not hearing twice in three lines. Short words are ignored: an

@@ -41,7 +41,7 @@ export async function runForgeWatch(): Promise<void> {
   if (opensAt && Date.now() - opensAt > WEEK) return;
   const media = renderWatchCard(
     [
-      ['Hulls per island', fmtInt(10)],
+      ['Yachts per island', fmtInt(10)],
       ['Islands forged', fmtInt(forge.forged ?? 0)],
       ['Fleet net', '-9'],
     ],

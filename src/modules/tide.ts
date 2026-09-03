@@ -54,8 +54,8 @@ async function onOpen(r: TideRound, force = false): Promise<void> {
   const media = renderWatchCard(
     [
       ['Prize', String(r.prize).replace(/-/g, ' ')],
-      ['Cost per hull', `${fmtInt(r.cost)} AP`],
-      ['Hulls entered', fmtInt(r.fleet?.length ?? 0)],
+      ['Cost per Yacht', `${fmtInt(r.cost)} AP`],
+      ['Yachts entered', fmtInt(r.fleet?.length ?? 0)],
     ],
     'the tide',
     `Round ${r.id}`,
@@ -78,7 +78,7 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
   const winnerId = Number(r.winner!.yachtId);
   const totalWeight = (r.fleet ?? []).reduce((s, f) => s + f.weight, 0);
 
-  let winnerClass = 'hull';
+  let winnerClass = 'Yacht';
   try {
     winnerClass = (await resolveYacht(winnerId)).class;
   } catch (e) {

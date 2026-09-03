@@ -169,7 +169,7 @@ function stillWatch(n: WatchNumbers, at: Date): string {
       club.voice.header,
       logEntryLine(at),
       '',
-      `No hull moved in ${fmtBlock(n.blocksSince!)} blocks.`,
+      `No Yacht moved in ${fmtBlock(n.blocksSince!)} blocks.`,
       `Afloat ${fmtInt(n.afloat)} \u00b7 awaiting claim ${fmtInt(n.unclaimed)}`,
       ...(season && n.regatta ? [n.regatta] : []),
       '',
@@ -232,12 +232,12 @@ export function pedigree(yachts: Yacht[]): PedigreeResult {
 export function pedigreePost(p: PedigreeResult): string {
   const weights = Object.values(club.classes).map((c) => c.weight).join('\u00b7');
   const lines = [
-    `Pedigree \u00b7 ${p.yachts.length} hull${p.yachts.length === 1 ? '' : 's'}.`,
+    `Pedigree \u00b7 ${p.yachts.length} Yacht${p.yachts.length === 1 ? '' : 's'}.`,
     p.breakdown,
     `Weight (${weights}): ${p.weight}`,
   ];
   if (!p.complete) {
-    lines.push('', `A forge takes ${club.islands.hullsPerIsland} hulls. This set is ${p.yachts.length}.`);
+    lines.push('', `A forge takes ${club.islands.hullsPerIsland} Yachts. This set is ${p.yachts.length}.`);
   }
   if (!club.islands.gradeThresholds) {
     lines.push('', 'The club has not published grade bands, so this log names none.');
@@ -257,7 +257,7 @@ export function forgePost(
   return truncateTweet(
     [
       'An island is forged.',
-      `${ids.length} hulls burned by ${who(owner.addr, owner.ens)}.`,
+      `${ids.length} Yachts burned by ${who(owner.addr, owner.ens)}.`,
       // Weight is a sum. Publishing it a hull short would understate it.
       ...(complete ? [`${p.breakdown} \u00b7 weight ${p.weight}`] : []),
       '',
@@ -313,7 +313,7 @@ export function tideOpenPost(t: TideOpen): string {
       `The Tide \u00b7 round ${t.id} is open.`,
       `For ${prizeName(t.prize)}.`,
       '',
-      `${t.cost} Anchor Points a hull \u00b7 max ${t.cap} per captain \u00b7 ${t.floor} to float the round.`,
+      `${t.cost} Anchor Points a Yacht \u00b7 max ${t.cap} per captain \u00b7 ${t.floor} to float the round.`,
       `Closes ${utcWhen(t.closesAt)}.`,
       '',
       'Points cannot buy better odds. \u2693',
@@ -333,7 +333,7 @@ export function tideSettledPost(t: TideSettled): string {
       `The Tide \u00b7 round ${t.id} is settled.`,
       `Yacht #${t.winnerId} takes ${prizeName(t.prize)}.`,
       '',
-      `${t.winnerClass} \u00b7 weight ${t.winnerWeight} of ${t.totalWeight} \u00b7 ${t.hulls} hulls entered`,
+      `${t.winnerClass} \u00b7 weight ${t.winnerWeight} of ${t.totalWeight} \u00b7 ${t.hulls} Yachts entered`,
       `Drawn on block ${fmtInt(t.settleBlock)}.`,
       `${t.hash.slice(0, 10)}\u2026${t.hash.slice(-6)}`,
       '',
@@ -349,7 +349,7 @@ export function forgeOpenPost(opensAt: number | null): string {
   return truncateTweet(
     [
       'The forge is open.',
-      `${g.hullsPerIsland} hulls \u2192 1 island. Fleet net ${g.netSupplyChange}.`,
+      `${g.hullsPerIsland} Yachts \u2192 1 island. Fleet net ${g.netSupplyChange}.`,
       '',
       `Grades: ${g.grades.join(' \u00b7 ')}.`,
       'It never closes again, and visiting is never limited.',
