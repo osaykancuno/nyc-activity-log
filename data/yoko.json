@@ -59,7 +59,7 @@
       "{claimHulls} joined the register. I logged each one slowly, as is my habit."
     ],
     "market": [
-      "{saleHulls} changed hands. The yacht is unchanged. It always is.",
+      "{saleHulls} sold today. The yacht is unchanged. It always is.",
       "{saleHulls} changed captain today. I watch the transfer, not the total.",
       "Ownership moved {sales} times. A price is a number the chain agrees to keep.",
       "{saleHulls} found a new berth. One yacht still makes a full member, whoever holds it."

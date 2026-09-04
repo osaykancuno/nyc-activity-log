@@ -80,7 +80,7 @@ export async function runJournal(force = false): Promise<void> {
   // the post says what the day amounted to, the card says what it was.
   const rows: [string, string][] = [
     ['Claimed today', fmtInt(j.claims)],
-    ['Changed hands', fmtInt(j.moved)],
+    ['Sold', fmtInt(j.moved)],
   ];
   if (j.tides) rows.push(['Tide rounds', fmtInt(j.tides)]);
   if (j.forges) rows.push(['Islands forged', fmtInt(j.forges)]);
