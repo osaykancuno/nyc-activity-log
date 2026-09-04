@@ -48,7 +48,7 @@ export function salePost(
 ): string {
   return truncateTweet(
     [
-      `Yacht #${y.id} changed hands.`,
+      `Yacht #${y.id} sold.`,
       `${fmtEth(priceWei, currency)} \u00b7 ${hullLine(y)}`,
       '',
       `${who(from.addr, from.ens)} \u2192 ${who(to.addr, to.ens)}`,
