@@ -139,7 +139,7 @@ export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []):
   const seed = `${f.at.toISOString().slice(0, 10)}:${f.claims}:${f.moved}:${f.tides}`;
 
   const openerTpl = pick(bank, seed, recent, f, a);
-  const opener = openerTpl ? fill(openerTpl, f, a) : `${hulls(f.claims)} afloat, ${hulls(f.moved)} moved.`;
+  const opener = openerTpl ? fill(openerTpl, f, a) : `${hulls(f.claims)} afloat, ${hulls(f.moved)} sold.`;
 
   // The close is chosen against the opener, not just against the last few days.
   const closeTpl = pick('close', seed, recent, f, a, opener);

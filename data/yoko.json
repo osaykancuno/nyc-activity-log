@@ -48,7 +48,7 @@
     "quiet": [
       "Nothing moved today. The bay keeps its own time.",
       "A quiet watch. Quiet is a reading too.",
-      "No yacht changed hands. I counted the ones already afloat and let that be enough.",
+      "Nothing sold today. I counted the ones already afloat and let that be enough.",
       "Still water. A watch is only worth keeping if you keep it when nothing happens.",
       "Nobody came aboard. The Marina keeps its own hours."
     ],
@@ -60,16 +60,16 @@
     ],
     "market": [
       "{saleHulls} sold today. The yacht is unchanged. It always is.",
-      "{saleHulls} changed captain today. I watch the transfer, not the total.",
-      "Ownership moved {sales} times. A price is a number the chain agrees to keep.",
-      "{saleHulls} found a new berth. One yacht still makes a full member, whoever holds it."
+      "{saleHulls} sold. I watch the transfer, not the total.",
+      "Sold today: {saleHulls}. A price is a number the chain agrees to keep.",
+      "{saleHulls} sold. One yacht still makes a full member, whoever holds it."
     ],
     "tide": [
       "The Tide turned once today. Points cannot buy better odds; that is the design.",
       "A round of the Tide moved. Chance, weighted by class, settled by a block nobody chose."
     ],
     "busy": [
-      "{claims} afloat, {sales} moved. The bay rarely does one thing at a time.",
+      "{claims} afloat, {sales} sold. The bay rarely does one thing at a time.",
       "Claims and sales in the same watch. Patterns show up when you stop hunting them.",
       "A full day on the water: {claims} claimed, {sales} sold. I took it all down slowly."
     ],
