@@ -1,10 +1,10 @@
 import { config } from '../config';
 import { log } from '../logger';
-import { getTide, type TideRound, type TideWinner } from '../api/relay';
+import { getDailyTide, getTide, type DailyDraw, type TideRound, type TideWinner } from '../api/relay';
 import type { Yacht } from '../api/nyc';
 import { enqueue } from '../poster';
 import { renderFleetCard, renderWatchCard, renderYachtCard } from '../render/card';
-import { tideOpenPost, tideSettledPost, type TideWinnerLine } from '../templates';
+import { dailyMarkPost, tideOpenPost, tideSettledPost, type TideWinnerLine } from '../templates';
 import { classBreakdown, fmtInt, grade } from '../util';
 import { resolveYacht } from '../yacht';
 import { alreadyPosted, markPosted } from '../store';
@@ -174,6 +174,95 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
     media,
     priority: 85,
   });
+}
+
+/**
+ * Module G on its other clock. The Tide runs free every day as well as on
+ * Sunday: one entry a captain whatever the size of their fleet, and a block
+ * nobody can foresee marks one hull. The mark is permanent.
+ *
+ * Only `last` carries the block and the hash a mark can be checked against, so
+ * it is the only day this log will publish - and a draw that marked nobody is
+ * not published at all. Roughly two days in five end that way; a log that
+ * announced each of them would be saying nothing, daily, at $0.015 a time.
+ */
+export async function runDailyTide(): Promise<void> {
+  if (!config.modules.tide) return;
+
+  const daily = await getDailyTide();
+  const t = daily?.tide;
+  if (!t) return;
+
+  // First look: note where the register stands and say nothing, the same way a
+  // Sunday round is seeded. A log does not open with a fortnight of old draws.
+  if (!alreadyPosted('tide:daily:seeded')) {
+    for (const d of [t.last, ...(t.history ?? [])]) {
+      if (d?.day) markPosted(`tide:daily:${d.day}`, { kind: 'seed' });
+    }
+    markPosted('tide:daily:seeded', { kind: 'seed', day: t.day, marks: t.marks });
+    l.info(`daily draw seeded at ${t.last?.day ?? t.day} - ${fmtInt(t.marks)} marks in the register`);
+    return;
+  }
+
+  const last = t.last;
+  if (!last?.yachtId || !last.block) return;
+  if (alreadyPosted(`tide:daily:${last.day}`)) return;
+  await postDailyMark(last, t.marks);
+}
+
+async function postDailyMark(last: DailyDraw, marks: number, force = false): Promise<void> {
+  if (!last.yachtId || last.block == null) return;
+  const id = Number(last.yachtId);
+  const block = last.block;
+  let y: Yacht | null = null;
+  try {
+    y = await resolveYacht(id);
+  } catch (e) {
+    l.warn(`could not read the marked hull #${id}`, e);
+  }
+
+  const note = `${fmtInt(last.entries)} entered · block ${fmtInt(block)}`;
+  const media = y
+    ? renderYachtCard(y, 'the daily tide', {
+      title: `Yacht #${id} marked`,
+      subtitle: `${grade(y)}${y.rarityRank != null ? ` · rank ${y.rarityRank}` : ''}`,
+      note,
+      right: last.day,
+    })
+    : renderWatchCard(
+      [['Marked', `#${id}`], ['Entered', fmtInt(last.entries)], ['Marks in the register', fmtInt(marks)]],
+      'the daily tide',
+      `The daily draw · ${last.day}`,
+      note,
+    );
+
+  enqueue({
+    key: force ? `tide:daily:${last.day}:preview:${Date.now()}` : `tide:daily:${last.day}`,
+    kind: 'tide-daily',
+    text: dailyMarkPost({
+      id,
+      hullGrade: y ? grade(y) : 'Yacht',
+      rank: y?.rarityRank ?? null,
+      entries: last.entries,
+      block,
+      hash: last.hash ?? '',
+      marks: marks ?? null,
+    }),
+    media,
+    priority: 50,
+  });
+}
+
+/** CLI only: render yesterday's daily draw, if it marked a hull. */
+export async function previewDailyTide(): Promise<void> {
+  const daily = await getDailyTide();
+  const t = daily?.tide;
+  if (!t) return l.error('the relay did not answer');
+  l.info(`daily draw: ${fmtInt(t.entries)} entered today, ${fmtInt(t.marks)} marks in the register`);
+  if (!t.last?.yachtId) {
+    return l.info(`the last draw (${t.last?.day ?? '?'}) marked no yacht - nothing to render, and nothing this log would post`);
+  }
+  await postDailyMark(t.last, t.marks, true);
 }
 
 /** CLI only: render the round that is open now and the last one that settled. */

@@ -8,7 +8,7 @@ import { headBlock, totalMinted, publicClient } from './chain/client';
 import { classify, type ChainEvent } from './chain/classify';
 import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
-import { previewTide } from './modules/tide';
+import { previewDailyTide, previewTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
 import { runJournal } from './modules/journal';
 import { parseHullId } from './modules/lookup';
@@ -40,6 +40,7 @@ const HELP = `
     npm run cli -- preview lookup 1709         render + print a lookup reply
     npm run cli -- preview watch               build the watch post from live numbers
     npm run cli -- preview journal             write Yoko's entry for today, now
+    npm run cli -- preview daily               render yesterday's free daily draw
     npm run cli -- soul                        who is keeping this log, and on what numbers
     npm run cli -- tx 0xabc...                 replay a real transaction through the pipeline
     npm run cli -- backfill 25890000 25890500  replay a block range
@@ -159,6 +160,8 @@ async function preview(args: string[]): Promise<void> {
 
     case 'tide':
       return previewTide();
+    case 'daily':
+      return previewDailyTide();
 
     case 'forge-phase':
       return runForgeWatch();

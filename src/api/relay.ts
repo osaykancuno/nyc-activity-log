@@ -86,6 +86,38 @@ export interface Tide {
   history: TideRound[];
 }
 
+/**
+ * One day of the free draw. Only the most recent one carries the block and the
+ * hash it was drawn on, which is what makes a mark checkable.
+ */
+export interface DailyDraw {
+  day: string;
+  entries: number;
+  /** Null when the draw marked nobody. It happens, and the relay says so plainly. */
+  yachtId: string | null;
+  block: number | null;
+  hash: string | null;
+  at: number | null;
+}
+
+export interface DailyTide {
+  tide: {
+    day: string;
+    entries: number;
+    entered: boolean;
+    closesAt: number;
+    minHoldBlocks: number;
+    settling: boolean;
+    settleBlock: number | null;
+    /** Yesterday's draw - the only one published with its block and hash. */
+    last: DailyDraw | null;
+    /** Marks in the register since it opened. A mark is permanent. */
+    marks: number;
+    /** Recent days, without the block or the hash. */
+    history: { day: string; yachtId: string | null; entries: number }[];
+  } | null;
+}
+
 export interface Forge {
   phase: 'announced' | 'open' | 'closed' | string;
   window: { opensAt: number | null; headStartEndsAt: number | null; hours: number } | null;
@@ -153,6 +185,8 @@ async function get<T>(path: string, ttlMs: number): Promise<T | null> {
 }
 
 export const getTide = () => get<Tide>('/tide', 60_000);
+/** The free daily draw. It moves once a day, so it is read gently. */
+export const getDailyTide = () => get<DailyTide>('/tide/daily', 5 * 60_000);
 export const getForge = () => get<Forge>('/forge', 5 * 60_000);
 export const getRelayStats = () => get<RelayStats>('/stats', 60_000);
 export const getChandlery = () => get<ChandleryCatalog>('/chandlery', 6 * 60 * 60_000);

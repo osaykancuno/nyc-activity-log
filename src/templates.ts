@@ -395,6 +395,46 @@ export function tideSettledPost(t: TideSettled): string {
   return truncateTweet(build(false, false));
 }
 
+export interface DailyMark {
+  id: number;
+  hullGrade: string;
+  rank: number | null;
+  entries: number;
+  block: number;
+  hash: string;
+  /** Marks in the register, this one included. */
+  marks: number | null;
+}
+
+/**
+ * The other clock. The Tide runs free every day as well as on Sunday: one entry
+ * a captain whatever the size of their fleet, and a block nobody can foresee
+ * marks one hull. The mark is permanent, which is the whole of the prize.
+ */
+export function dailyMarkPost(m: DailyMark): string {
+  const shortHash = m.hash ? `${m.hash.slice(0, 10)}\u2026${m.hash.slice(-6)}` : '';
+  const hull = m.rank != null ? `${m.hullGrade} \u00b7 rank ${m.rank}` : m.hullGrade;
+
+  const build = (withRegister: boolean, withHash: boolean): string =>
+    [
+      `The Tide \u00b7 the daily draw.`,
+      `Yacht #${m.id} is marked.`,
+      '',
+      hull,
+      `${fmtInt(m.entries)} entered. Free, one a captain.`,
+      `Marked on block ${fmtInt(m.block)}.`,
+      ...(withHash && shortHash ? [shortHash] : []),
+      ...(withRegister && m.marks != null ? [`${fmtInt(m.marks)} marks in the register. A mark is permanent.`] : []),
+      '',
+      '\u2693',
+    ].join('\n');
+
+  for (const candidate of [build(true, true), build(false, true), build(false, false)]) {
+    if (tweetLength(candidate) <= 272) return candidate;
+  }
+  return truncateTweet(build(false, false));
+}
+
 /* ── The forge (module I) ─────────────────────────────────────────────── */
 
 export function forgeOpenPost(opensAt: number | null): string {

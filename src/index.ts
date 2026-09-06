@@ -9,7 +9,7 @@ import { poll, resolveStartBlock } from './chain/watcher';
 import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
 import { runLookup } from './modules/lookup';
-import { runTide } from './modules/tide';
+import { runDailyTide, runTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
 import { runJournal } from './modules/journal';
 import { queueStats } from './poster';
@@ -123,10 +123,15 @@ async function main(): Promise<void> {
   }
 
   if (config.modules.tide) {
-    const tick = () => { void runTide().catch((e) => l.error('tide failed', e)); };
+    // Both clocks of the Tide on the same tick: the Sunday round, and the free
+    // daily draw. The relay caches each, so this is one small read either way.
+    const tick = () => {
+      void runTide().catch((e) => l.error('tide failed', e));
+      void runDailyTide().catch((e) => l.error('daily tide failed', e));
+    };
     tick();
     setInterval(tick, config.tidePollMs);
-    l.info(`tide polling every ${Math.round(config.tidePollMs / 60000)} min via ${config.relayUrl}`);
+    l.info(`tide polling every ${Math.round(config.tidePollMs / 60000)} min via ${config.relayUrl} (Sunday round + daily draw)`);
   }
 
   if (config.modules.forge !== false) {

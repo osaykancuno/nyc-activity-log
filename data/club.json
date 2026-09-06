@@ -61,7 +61,10 @@
       "cost": 0,
       "entriesPerCaptain": 1,
       "closeUTC": "00:00",
-      "note": "One hull marked by an unforeseeable block. Mark is permanent."
+      "minHoldBlocks": 7200,
+      "note": "One hull marked by an unforeseeable block. Mark is permanent.",
+      "misses": "A draw can end marking nobody even with entries in it - the relay publishes those days with yachtId null and the club does not say why. Never invent a reason for one.",
+      "published": "Only the most recent draw carries its block and hash (RELAY /tide/daily, field last). The history rows carry neither, so they are not republishable."
     },
     "sunday": {
       "costPerHull": 100,

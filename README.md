@@ -19,6 +19,7 @@ The club's own bot. It reads the chain and the club's public CC0 API and writes 
 | **E · Watch** | 09:00 and 19:00 Europe/Rome, every day | afloat / fleet / awaiting claim / captains, the running Regatta season, and the block it was all read at. A day when nothing changed hands is written as a different post: it leads with how far the chain travelled while the fleet stood still |
 | **F · Pedigree** | CLI | class weights of a forge set |
 | **G · Tide** | the club relay | a round opens: prize, cost, cap, the captains needed to float it, close. It settles: every winning hull — a round hands out two prizes once 30 captains enter — each against the pool it was drawn from, the settle block and the draw hash |
+| **G · Tide, daily** | the club relay | the free draw, once a day: the hull a block nobody could foresee marked, how many captains entered, the block and the hash. A day that marked nobody is not posted — roughly two in five end that way |
 | **I · Forge** | relay phase + 10 hulls burned in one tx | arms itself when the club opens forging — no date to remember |
 | **J · Captain's log** | 21:00 Europe/Rome, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
 
