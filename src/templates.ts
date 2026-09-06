@@ -1,7 +1,7 @@
 import { club, yoko } from './config';
 import type { Yacht } from './api/nyc';
 import {
-  classBreakdown, fmtBlock, fmtEth, fmtInt, logDate, logEntryLine, shortAddr, truncateTweet, tweetLength, who,
+  classBreakdown, fmtBlock, fmtEth, fmtInt, grade, logDate, logEntryLine, shortAddr, truncateTweet, tweetLength, who,
 } from './util';
 
 /**
@@ -14,14 +14,14 @@ const AP = 'Anchor Points';
 
 /** Rank is only printed when the club has published one. Never computed here. */
 const classLine = (y: Yacht): string => {
-  const parts = [y.class, `${y.anchorPointsPerDay} ${AP}/day`];
+  const parts = [grade(y), `${y.anchorPointsPerDay} ${AP}/day`];
   if (y.rarityRank != null) parts.push(`rank ${y.rarityRank}`);
   return parts.join(' · ');
 };
 
 /** Class and rank only - what a market post needs. */
 const hullLine = (y: Yacht): string =>
-  y.rarityRank != null ? `${y.class} \u00b7 rank ${y.rarityRank}` : y.class;
+  y.rarityRank != null ? `${grade(y)} \u00b7 rank ${y.rarityRank}` : grade(y);
 
 export function claimPost(y: Yacht, blockNumber: bigint): string {
   return truncateTweet(
@@ -79,7 +79,7 @@ export function sweepPost(
 ): string {
   const complete = yachts.length === ids.length && yachts.length > 0;
   const priceLine = complete
-    ? `${fmtEth(totalWei, currency)} total \u00b7 ${classBreakdown(yachts.map((y) => y.class))}`
+    ? `${fmtEth(totalWei, currency)} total \u00b7 ${classBreakdown(yachts.map(grade))}`
     : `${fmtEth(totalWei, currency)} total`;
 
   const build = (shownIds: number): string => {
@@ -220,11 +220,12 @@ export interface PedigreeResult {
 }
 
 export function pedigree(yachts: Yacht[]): PedigreeResult {
-  const weight = yachts.reduce((s, y) => s + (club.classes[y.class as keyof typeof club.classes]?.weight ?? 0), 0);
+  // A Commodore weighs 12 where a Superyacht weighs 5: grade the hull, never read its class.
+  const weight = yachts.reduce((s, y) => s + (club.classes[grade(y)]?.weight ?? 0), 0);
   return {
     yachts,
     weight,
-    breakdown: classBreakdown(yachts.map((y) => y.class)),
+    breakdown: classBreakdown(yachts.map(grade)),
     complete: yachts.length === club.islands.hullsPerIsland,
   };
 }

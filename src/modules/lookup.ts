@@ -4,6 +4,7 @@ import { enqueue } from '../poster';
 import { renderYachtCard } from '../render/card';
 import { lookupReply } from '../templates';
 import { getState, setMentionSinceId } from '../store';
+import { grade } from '../util';
 import { fetchMentions } from '../x/client';
 import { resolveYacht } from '../yacht';
 
@@ -33,7 +34,7 @@ export async function runLookup(): Promise<void> {
       const y = await resolveYacht(id);
       const media = renderYachtCard(y, 'lookup', {
         title: `Yacht #${y.id}`,
-        subtitle: `${y.class}${y.rarityRank != null ? ` \u00b7 rank ${y.rarityRank}` : ''} \u00b7 ${y.anchorPointsPerDay} AP/day`,
+        subtitle: `${grade(y)}${y.rarityRank != null ? ` \u00b7 rank ${y.rarityRank}` : ''} \u00b7 ${y.anchorPointsPerDay} AP/day`,
         note: `born from Normie #${y.normieId}`,
       });
       enqueue({ key: `lookup:${m.id}`, kind: 'lookup', text: lookupReply(y), media, replyTo: m.id, priority: 30 });

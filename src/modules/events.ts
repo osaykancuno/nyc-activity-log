@@ -4,7 +4,7 @@ import { log } from '../logger';
 import { enqueue } from '../poster';
 import { renderFleetCard, renderYachtCard } from '../render/card';
 import { claimPost, forgePost, salePost, sweepPost } from '../templates';
-import { classBreakdown, fmtEth, fmtInt, shortAddr, who } from '../util';
+import { classBreakdown, fmtEth, fmtInt, grade, shortAddr, who } from '../util';
 import { resolveFleet, resolveYacht } from '../yacht';
 
 const l = log('events');
@@ -29,7 +29,7 @@ async function onClaim(ev: ChainEvent): Promise<void> {
   const y = await resolveYacht(ev.tokenIds[0]);
   const media = renderYachtCard(y, 'claim', {
     title: `Yacht #${y.id}`,
-    subtitle: `${y.class}${rank(y.rarityRank)} \u00b7 ${y.anchorPointsPerDay} AP/day`,
+    subtitle: `${grade(y)}${rank(y.rarityRank)} \u00b7 ${y.anchorPointsPerDay} AP/day`,
     note: `born from Normie #${y.normieId}`,
     right: 'afloat',
   });
@@ -47,7 +47,7 @@ async function onSale(ev: ChainEvent): Promise<void> {
 
   const media = renderYachtCard(y, 'sale', {
     title: `Yacht #${y.id}`,
-    subtitle: `${y.class}${rank(y.rarityRank)}`,
+    subtitle: `${grade(y)}${rank(y.rarityRank)}`,
     note: `${who(ev.from, fromEns)} \u2192 ${who(ev.to, toEns)}`,
     right: fmtEth(price, ev.currency ?? 'ETH'),
   });
@@ -71,7 +71,7 @@ async function onSweep(ev: ChainEvent): Promise<void> {
 
   const media = renderFleetCard(yachts, 'sweep', {
     title: `${fmtInt(ids.length)}x Sweep`,
-    subtitle: missing.length ? '' : classBreakdown(yachts.map((y) => y.class)),
+    subtitle: missing.length ? '' : classBreakdown(yachts.map(grade)),
     note: `\u2192 ${who(ev.to, toEns)}`,
     right: fmtEth(price, ev.currency ?? 'ETH'),
   }, ids.length);
@@ -92,7 +92,7 @@ async function onForge(ev: ChainEvent): Promise<void> {
 
   const media = renderFleetCard(yachts, 'forge', {
     title: `${fmtInt(ids.length)} Yachts burned`,
-    subtitle: missing.length ? '' : classBreakdown(yachts.map((y) => y.class)),
+    subtitle: missing.length ? '' : classBreakdown(yachts.map(grade)),
     note: `by ${who(ev.from, ens)} \u00b7 ${shortAddr(ev.txHash)}`,
     right: 'island',
   }, ids.length);

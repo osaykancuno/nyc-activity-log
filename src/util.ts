@@ -1,5 +1,5 @@
 import { formatEther } from 'viem';
-import { club } from './config';
+import { club, type ClassName } from './config';
 
 /** 0x9f4c…12c4 — never a full wallet, never a scraped register. */
 export const shortAddr = (a: string): string =>
@@ -49,6 +49,17 @@ export const ZERO = '0x0000000000000000000000000000000000000000';
 export const isZero = (a: string) => a.toLowerCase() === ZERO;
 
 /** Count classes: { Superyacht: 1, Cruiser: 3 } -> "3 Cruiser \u00b7 1 Superyacht" */
+/**
+ * What the club calls this hull. `class` comes from the burned Normie and stops
+ * at Superyacht; the grade above it - Commodore, a Superyacht carrying two
+ * extras - is published in `tier`, and it is the one worth 120 Anchor Points a
+ * day and weight 12 in a Tide round. Reading `class` alone published every
+ * Commodore as a plain Superyacht, and printed a Commodore's own AP rate and
+ * draw weight beside the wrong name.
+ */
+export const grade = (y: { class: string; tier?: string }): ClassName =>
+  ((y.tier && y.tier in club.classes ? y.tier : y.class) as ClassName);
+
 export function classBreakdown(classes: string[]): string {
   const order: string[] = ['Commodore', 'Superyacht', 'Sloop', 'Cruiser'];
   const counts = new Map<string, number>();

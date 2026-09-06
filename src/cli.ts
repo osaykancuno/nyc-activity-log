@@ -14,7 +14,7 @@ import { runJournal } from './modules/journal';
 import { parseHullId } from './modules/lookup';
 import { enqueue, waitForQueue } from './poster';
 import { lookupReply, pedigree, pedigreePost, suggestedBio } from './templates';
-import { fmtInt } from './util';
+import { fmtInt, grade } from './util';
 import { resolveYacht, resolveYachts } from './yacht';
 import { getChandlery, getForge, getRelayStats, getTide, relayHealth } from './api/relay';
 import { club as clubData } from './config';
@@ -57,7 +57,7 @@ async function verify(): Promise<void> {
   console.log(`  contract      ok   totalMinted() = ${fmtInt(Number(minted))} (${fmtInt(stats.yachts - Number(minted))} awaiting claim)`);
 
   const y = await resolveYacht(1709);
-  console.log(`  metadata      ok   #${y.id} ${y.class}, facts from the ${y.source === 'chain' ? 'contract' : 'club API'}`);
+  console.log(`  metadata      ok   #${y.id} ${grade(y)}, facts from the ${y.source === 'chain' ? 'contract' : 'club API'}`);
   console.log(`  art           ${y.art.from === 'chain' ? 'ok  ' : '--  '} ${y.art.onPixels} lit pixels, drawn from the ${y.art.from === 'chain' ? "contract's own tokenURI" : 'club API snapshot'} (ART_SOURCE=${config.artSource})`);
 
   const health = await relayHealth();
@@ -144,7 +144,7 @@ async function preview(args: string[]): Promise<void> {
       const y = await resolveYacht(id);
       const media = renderYachtCard(y, 'lookup', {
         title: `Yacht #${y.id}`,
-        subtitle: `${y.class}${y.rarityRank != null ? ` \u00b7 rank ${y.rarityRank}` : ''} \u00b7 ${y.anchorPointsPerDay} AP/day`,
+        subtitle: `${grade(y)}${y.rarityRank != null ? ` \u00b7 rank ${y.rarityRank}` : ''} \u00b7 ${y.anchorPointsPerDay} AP/day`,
         note: `born from Normie #${y.normieId}`,
       });
       enqueue({ key: `preview:lookup:${id}:${Date.now()}`, kind: 'lookup', text: lookupReply(y), media, priority: 99 });

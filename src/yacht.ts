@@ -115,6 +115,12 @@ export async function fromChain(id: number): Promise<Yacht> {
   for (const a of meta.attributes ?? []) attrs.set(a.trait_type, a.value);
 
   const cls = String(attrs.get('Class') ?? 'Cruiser') as ClassName;
+  // Commodore is not a Class on the token: it is a Superyacht carrying two
+  // extras, and the club grades it 120 AP a day and weight 12. The contract
+  // publishes the count, so a hull the club API has not indexed yet still gets
+  // its right name instead of being flattened to Superyacht.
+  const extras = Number(attrs.get('Amenities') ?? 0);
+  const tier: ClassName = cls === 'Superyacht' && extras >= 2 ? 'Commodore' : cls;
   const traits: Record<string, string | number> = { class: cls };
   for (const [label, key] of Object.entries(TRAIT_KEY)) {
     const v = attrs.get(label);
@@ -130,8 +136,8 @@ export async function fromChain(id: number): Promise<Yacht> {
     normieId: Number(attrs.get('Born From Normie') ?? 0),
     pixelCount,
     class: cls,
-    tier: cls,
-    anchorPointsPerDay: club.classes[cls]?.anchorPointsPerDay ?? 0,
+    tier,
+    anchorPointsPerDay: club.classes[tier]?.anchorPointsPerDay ?? 0,
     rarityRank: null,
     traits,
     art: { size: 40, on, off, onPixels: (bits.match(/1/g) ?? []).length, bits, from: 'chain' },

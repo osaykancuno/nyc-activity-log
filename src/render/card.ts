@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { config } from '../config';
 import { log } from '../logger';
 import type { Yacht } from '../api/nyc';
+import { grade } from '../util';
 
 const l = log('render');
 
@@ -255,7 +256,7 @@ export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLin
       ctx.font = font(labelSize, '500');
       ctx.textAlign = 'center';
       // Class only while it fits; the id is the part that must always be there.
-      const full = `#${y.id} · ${y.class}`;
+      const full = `#${y.id} · ${grade(y)}`;
       ctx.fillText(ctx.measureText(full).width <= size + gapX - 6 ? full : `#${y.id}`, x + size / 2, yy + size + labelSize + 4);
       ctx.textAlign = 'left';
     });

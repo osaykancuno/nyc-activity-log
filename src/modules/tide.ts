@@ -5,7 +5,7 @@ import type { Yacht } from '../api/nyc';
 import { enqueue } from '../poster';
 import { renderFleetCard, renderWatchCard, renderYachtCard } from '../render/card';
 import { tideOpenPost, tideSettledPost, type TideWinnerLine } from '../templates';
-import { classBreakdown, fmtInt } from '../util';
+import { classBreakdown, fmtInt, grade } from '../util';
 import { resolveYacht } from '../yacht';
 import { alreadyPosted, markPosted } from '../store';
 
@@ -125,7 +125,7 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
 
   const lines: TideWinnerLine[] = drawn.map((d) => ({
     id: d.id,
-    yachtClass: d.yacht?.class ?? 'Yacht',
+    yachtClass: d.yacht ? grade(d.yacht) : 'Yacht',
     weight: d.weight,
     pool: d.pool,
   }));
@@ -139,7 +139,7 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
     const only = drawn[0]!;
     media = renderYachtCard(hulls[0]!, 'the tide', {
       title: `Round ${r.id} settled`,
-      subtitle: `Yacht #${only.id} · ${hulls[0]!.class} · weight ${only.weight} of ${only.pool}`,
+      subtitle: `Yacht #${only.id} · ${grade(hulls[0]!)} · weight ${only.weight} of ${only.pool}`,
       note,
       right: 'winner',
     });
@@ -148,7 +148,7 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
     // the club did not run.
     media = renderFleetCard(hulls, 'the tide', {
       title: `Round ${r.id} settled`,
-      subtitle: `${fmtInt(drawn.length)} prizes · ${classBreakdown(hulls.map((y) => y.class))}`,
+      subtitle: `${fmtInt(drawn.length)} prizes · ${classBreakdown(hulls.map(grade))}`,
       note,
       right: 'winners',
     }, drawn.length);
