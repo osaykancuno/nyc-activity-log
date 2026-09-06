@@ -66,7 +66,10 @@ async function verify(): Promise<void> {
     const [tide, forge, rstats, chandlery] = await Promise.all([getTide(), getForge(), getRelayStats(), getChandlery()]);
     if (tide?.round) {
       const r = tide.round;
-      console.log(`  tide          ok   round ${r.id} for ${r.prize}, ${r.fleet?.length ?? 0} hulls in, closes ${new Date(r.closesAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`);
+      const prizes = (r.maxWinners ?? 1) > 1 && r.winnerAt?.length ? `, ${r.maxWinners} prizes at ${r.winnerAt[0]} captains` : '';
+      console.log(`  tide          ok   round ${r.id} for ${r.prize}, ${r.captains ?? 0} captains / ${r.fleet?.length ?? 0} hulls in${prizes}, closes ${new Date(r.closesAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`);
+    } else if (tide?.dormant) {
+      console.log(`  tide          ok   dormant - no prize in the club's wallet, ${tide.potCount ?? 0} waiting. No round opens, and the log says nothing.`);
     }
     if (forge) {
       const opens = forge.window?.opensAt ? new Date(forge.window.opensAt).toISOString().slice(0, 16).replace('T', ' ') : 'unannounced';

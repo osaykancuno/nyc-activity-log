@@ -65,15 +65,19 @@
     },
     "sunday": {
       "costPerHull": 100,
-      "minHulls": 3,
+      "minCaptains": 3,
       "maxHullsPerWallet": 3,
       "weight": "class",
       "draw": "future block",
       "closeUTC": "18:00",
-      "round3ClosesAt": "2026-09-06T18:00:00Z",
-      "note": "A round always runs its full week and cannot be ended early."
+      "maxPrizes": 2,
+      "secondPrizeAtCaptains": 30,
+      "prizes": "NFTs only since 4 September 2026. Moorings, naming rights and Tide Marks have left the Tide: the Regatta hands out standing, the Tide hands out property.",
+      "note": "Captains are counted, never yachts. Three float a round, thirty make it hand out two prizes instead of one, and a captain who wins leaves the pool with every yacht they entered - so a second prize is drawn from a smaller pool than the first.",
+      "earlyEnd": "The club's own docs say a round always runs its full week and cannot be ended early. The relay publishes callable and earlyCall regardless; neither is republished here, and the relay is what the code reads."
     },
-    "_source": "Live round at RELAY /tide."
+    "dormant": "No NFT in the club's prize wallet means no round opens at all. The relay says so in dormant and counts what is waiting in potCount.",
+    "_source": "Live round at RELAY /tide, re-read 6 September 2026. The relay is authoritative; these are the fallback."
   },
   "islands": {
     "seasonIIClosesAt": "2026-09-14T11:40:15Z",

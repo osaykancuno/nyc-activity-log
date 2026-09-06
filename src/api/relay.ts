@@ -18,37 +18,85 @@ const l = log('relay');
  * is cached, and nothing polls faster than the minutes set in config.
  */
 
+/**
+ * One winner of a round. The relay publishes an array of these now, because a
+ * round hands out two prizes instead of one once enough captains enter.
+ */
+export interface TideWinner {
+  yachtId: string;
+  weight: number;
+  /** The number the draw landed on, out of poolWeight. Absent on older rounds. */
+  draw?: number | null;
+  /**
+   * The pool this hull was drawn from - and NOT the weight of the whole entered
+   * fleet. A captain who wins leaves the pool with every yacht they entered, so
+   * a second prize is drawn from a smaller pool than the first. Printing the
+   * fleet total against a second winner would state a draw that never happened.
+   */
+  poolWeight?: number | null;
+  granted?: boolean | null;
+}
+
 export interface TideRound {
   id: number;
   prize: string;
+  /** Set when the announced prize changed after the round was announced. */
+  prizeWas: string | null;
   cost: number;
   cap: number;
+  /** The minimum CAPTAINS for a round to be drawn at all. Never a hull count. */
   floor: number;
   watermark: number;
   committed: number;
   commits: number;
+  /** Captains entered. The club counts captains; yachts only carry weight. */
+  captains: number | null;
   fleet: { yachtId: string; weight: number }[];
   closesAt: number;
   closed: boolean;
   callable: boolean;
+  earlyCall: boolean | null;
   calledBlock: number | null;
   settleBlock: number | null;
   hash: string | null;
+  /** The old single winner. Still sent for a one-prize round; `winners` is the truth. */
   winner: { yachtId: string; weight: number } | null;
+  winners: TideWinner[] | null;
+  winnersGranted: number | null;
+  /** Captain counts that add a further prize, e.g. [30]. */
+  winnerAt: number[] | null;
+  /** What winnerAt counts - "wallets" today. */
+  winnerAtCounts: string | null;
+  /** The ceiling on prizes for this round. */
+  maxWinners: number | null;
   settledAt: number | null;
   prizeGranted: boolean | null;
   next: string | null;
 }
 
-export interface Tide { round: TideRound | null; history: TideRound[] }
+export interface Tide {
+  round: TideRound | null;
+  /**
+   * No NFT in the club's prize wallet means no round opens at all: the Tide
+   * waits rather than take points for a prize that does not exist.
+   */
+  dormant: boolean | null;
+  /** How many prizes are waiting in the pot. */
+  potCount: number | null;
+  history: TideRound[];
+}
 
 export interface Forge {
   phase: 'announced' | 'open' | 'closed' | string;
   window: { opensAt: number | null; headStartEndsAt: number | null; hours: number } | null;
   forgingEnds: number | null;
+  /** How much warning the club gives before the window opens. */
+  noticeHours: number | null;
   slots: number;
   forged: number;
   holds: boolean;
+  /** The forge's own slot record. Shape is the relay's; this log does not read it. */
+  slot: unknown;
 }
 
 export interface RelayStats { afloat: number; members: number; yachts: number; at: number }
@@ -57,8 +105,21 @@ export interface ChandleryCatalog {
   catalog: Record<string, { price: number; kind: string; allowed: string[] | null; oneTime: boolean }>;
 }
 
+/**
+ * The season. `/regatta` also returns a `hall` of past champions, and every row
+ * of it names a wallet - so it is deliberately not typed here and never read.
+ * The club publishes no holder data and neither does its log.
+ */
 export interface RegattaSeason {
-  season: { id: number; name: string; status: string; day: number; days: number; endAt: number } | null;
+  season: {
+    id: number; name: string; status: string; day: number; days: number;
+    startAt: number | null; endAt: number; nextSeasonAt: number | null;
+    divisions: { key: string; name: string; min: number; max: number | null }[] | null;
+    cupMode: string | null;
+    presenceMode: string | null;
+    inMuster: boolean | null;
+    inviteSeason: number | null;
+  } | null;
 }
 
 const cache = new Map<string, { at: number; data: unknown }>();

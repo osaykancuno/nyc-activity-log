@@ -304,42 +304,94 @@ const utcWhen = (ms: number): string => {
 
 export interface TideOpen {
   id: number; prize: string; cost: number; cap: number; floor: number;
-  commits: number; hulls: number; closesAt: number;
+  commits: number; hulls: number; captains: number | null; closesAt: number;
+  /** The captain count that adds a further prize, and the ceiling on prizes. */
+  extraAt: number | null; maxPrizes: number | null;
 }
 
+/**
+ * The floor is CAPTAINS, not hulls: a round needs three of them to be drawn at
+ * all, and one captain entering three yachts does not float it. This used to
+ * print the figure bare, next to a line about yachts, which read as three hulls.
+ */
 export function tideOpenPost(t: TideOpen): string {
-  return truncateTweet(
+  const extra = t.extraAt != null && (t.maxPrizes ?? 1) > 1
+    ? `${fmtInt(t.maxPrizes!)} prizes if ${fmtInt(t.extraAt)} captains enter.`
+    : null;
+
+  const build = (withExtra: boolean): string =>
     [
       `The Tide \u00b7 round ${t.id} is open.`,
       `For ${prizeName(t.prize)}.`,
       '',
-      `${t.cost} Anchor Points a Yacht \u00b7 max ${t.cap} per captain \u00b7 ${t.floor} to float the round.`,
+      `${t.cost} Anchor Points a Yacht \u00b7 max ${t.cap} per captain \u00b7 ${t.floor} captains to float the round.`,
+      ...(withExtra && extra ? [extra] : []),
       `Closes ${utcWhen(t.closesAt)}.`,
       '',
       'Points cannot buy better odds. \u2693',
-    ].join('\n'),
-  );
+    ].join('\n');
+
+  for (const candidate of [build(true), build(false)]) {
+    if (tweetLength(candidate) <= 272) return candidate;
+  }
+  return truncateTweet(build(false));
+}
+
+export interface TideWinnerLine {
+  id: number;
+  yachtClass: string;
+  weight: number;
+  /**
+   * The pool this hull was drawn from. A winning captain leaves the pool with
+   * every yacht they entered, so a second prize is drawn from a smaller pool -
+   * printing the whole fleet against it would describe a draw that never ran.
+   */
+  pool: number;
 }
 
 export interface TideSettled {
-  id: number; prize: string; winnerId: number; winnerClass: string;
-  winnerWeight: number; totalWeight: number; hulls: number;
+  id: number; prize: string; winners: TideWinnerLine[];
+  hulls: number; captains: number | null;
   settleBlock: number; hash: string;
 }
 
+/** One post for the whole round, however many prizes it handed out. */
 export function tideSettledPost(t: TideSettled): string {
-  return truncateTweet(
+  const first = t.winners[0]!;
+  const many = t.winners.length > 1;
+  const shortHash = t.hash ? `${t.hash.slice(0, 10)}\u2026${t.hash.slice(-6)}` : '';
+
+  const headline = many
+    ? `${fmtInt(t.winners.length)} prizes, each ${prizeName(t.prize)}.`
+    : `Yacht #${first.id} takes ${prizeName(t.prize)}.`;
+
+  const drawn = many
+    ? t.winners.map((w) => `Yacht #${w.id} \u00b7 ${w.yachtClass} \u00b7 weight ${w.weight} of ${w.pool}`)
+    : [`${first.yachtClass} \u00b7 weight ${first.weight} of ${first.pool}`];
+
+  // Captains are what the club counts. Hulls are only what they carried in.
+  const entered = t.captains != null
+    ? `${fmtInt(t.hulls)} Yachts from ${fmtInt(t.captains)} captains`
+    : `${fmtInt(t.hulls)} Yachts entered`;
+
+  const build = (withEntered: boolean, withHash: boolean): string =>
     [
       `The Tide \u00b7 round ${t.id} is settled.`,
-      `Yacht #${t.winnerId} takes ${prizeName(t.prize)}.`,
+      headline,
       '',
-      `${t.winnerClass} \u00b7 weight ${t.winnerWeight} of ${t.totalWeight} \u00b7 ${t.hulls} Yachts entered`,
+      ...drawn,
+      ...(withEntered ? [entered] : []),
       `Drawn on block ${fmtInt(t.settleBlock)}.`,
-      `${t.hash.slice(0, 10)}\u2026${t.hash.slice(-6)}`,
+      ...(withHash && shortHash ? [shortHash] : []),
       '',
       '\u2693',
-    ].join('\n'),
-  );
+    ].join('\n');
+
+  // The hash is the last thing given up: it is what makes the draw checkable.
+  for (const candidate of [build(true, true), build(false, true), build(false, false)]) {
+    if (tweetLength(candidate) <= 272) return candidate;
+  }
+  return truncateTweet(build(false, false));
 }
 
 /* ── The forge (module I) ─────────────────────────────────────────────── */
