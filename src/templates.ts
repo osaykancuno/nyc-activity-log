@@ -286,6 +286,12 @@ export const shortAddress = shortAddr;
    Every number below comes from the club's own relay, and the settle block
    and hash make a round checkable by anyone who can read a block explorer. */
 
+/**
+ * Since 4 September 2026 the Tide draws nothing but NFTs: moorings, naming
+ * rights and Tide Marks have left it, because the Regatta hands out standing
+ * and the Tide hands out property. The retired labels stay because settled
+ * rounds keep their prize, and a round from August is still a round.
+ */
 const PRIZE_LABEL: Record<string, string> = {
   'forging-slot': 'a forging slot',
   'tide-mark': 'a Tide Mark',

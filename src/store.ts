@@ -34,6 +34,7 @@ export interface Journal {
   day: string | null;
   claims: number;
   moved: number;
+  /** Both clocks of the Tide: rounds settled and daily marks alike. */
   tides: number;
   forges: number;
   lastEntryDay: string | null;

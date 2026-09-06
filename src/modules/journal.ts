@@ -82,7 +82,8 @@ export async function runJournal(force = false): Promise<void> {
     ['Claimed today', fmtInt(j.claims)],
     ['Sold', fmtInt(j.moved)],
   ];
-  if (j.tides) rows.push(['Tide rounds', fmtInt(j.tides)]);
+  // Both clocks land in this count, and a daily mark is not a round.
+  if (j.tides) rows.push(['Tide draws', fmtInt(j.tides)]);
   if (j.forges) rows.push(['Islands forged', fmtInt(j.forges)]);
   rows.push(['Fleet afloat', fmtInt(afloat)]);
   if (fleet > afloat) rows.push(['Awaiting claim', fmtInt(fleet - afloat)]);
