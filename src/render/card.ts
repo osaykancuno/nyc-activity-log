@@ -43,14 +43,20 @@ let NUMBERS_FROM = '';
 /** Pixel faces are for chrome only; anything else can carry a number. */
 const isPixelFace = (file: string): boolean => /pixel/i.test(file);
 
+// DejaVu first everywhere, including a desktop that happens to have it: it is
+// what the server draws in, and a preview in any other face measures different
+// widths. A daily-draw card went out on 10 Sep 2026 with its title over its
+// date - Segoe UI on the desktop had left room that DejaVu does not.
 const SANS_PATHS = [
   '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+  'C:/Windows/Fonts/DejaVuSans.ttf',
   '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
   '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
   'C:/Windows/Fonts/segoeui.ttf',
 ];
 const SANS_BOLD_PATHS = [
   '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+  'C:/Windows/Fonts/DejaVuSans-Bold.ttf',
   '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
   '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
   'C:/Windows/Fonts/segoeuib.ttf',
@@ -117,6 +123,35 @@ const font = (size: number, weight = '500') =>
 const chromeFont = (size: number, weight = '600') =>
   CHROME ? `${weight} ${size}px "${CHROME}", "Segoe UI", sans-serif` : font(size, weight);
 
+/**
+ * Measure before drawing. Sets the largest font from `size` down to `min` that
+ * keeps `text` inside `max`, and returns what to draw - cut with an ellipsis
+ * only if even the smallest size will not hold it, and said so in the log,
+ * because a cut line is a fact that did not make it onto the card.
+ *
+ * Every line on these cards used to be drawn at a fixed size and trusted to
+ * fit. That held on a Windows desktop and not on the server, whose DejaVu is a
+ * good deal wider than Segoe UI: on 10 Sep 2026 a daily-draw card went out
+ * with its title printed over the date beside it. Measuring at draw time is
+ * right in whatever face the machine has.
+ */
+function fit(ctx: SKRSContext2D, text: string, max: number, size: number, weight: string, min: number): string {
+  let s = size;
+  ctx.font = font(s, weight);
+  while (s > min && ctx.measureText(text).width > max) {
+    s -= 1;
+    ctx.font = font(s, weight);
+  }
+  if (ctx.measureText(text).width <= max) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}\u2026`).width > max) t = t.slice(0, -1);
+  l.warn(`card text cut to fit ${Math.round(max)}px: "${text}"`);
+  return `${t.trimEnd()}\u2026`;
+}
+
+/** The gap kept between a left line and the figure right-aligned beside it. */
+const GAP = 28;
+
 /** Manual tracking - reliable across canvas builds. */
 function tracked(ctx: SKRSContext2D, text: string, x: number, y: number, spacing: number): number {
   let cx = x;
@@ -166,26 +201,30 @@ function chrome(ctx: SKRSContext2D, w: number, h: number, eyebrow: string): void
 export interface CardLines { title: string; subtitle?: string; note?: string; right?: string }
 
 function caption(ctx: SKRSContext2D, W: number, lines: CardLines, titleSize: number, baseY: number): void {
+  const inner = W - 120;
+
+  // The figure on the right - a price, a state - is the fact that has to stay
+  // whole, so it is measured first and the title gets whatever room is left.
+  let rightW = 0;
+  if (lines.right) {
+    const right = fit(ctx, lines.right, inner * 0.45, 38, '600', 26);
+    rightW = ctx.measureText(right).width;
+    ctx.fillStyle = INK;
+    ctx.textAlign = 'right';
+    ctx.fillText(right, W - 60, baseY);
+    ctx.textAlign = 'left';
+  }
+
   ctx.fillStyle = INK;
-  ctx.font = font(titleSize, '600');
-  ctx.fillText(lines.title, 60, baseY);
+  ctx.fillText(fit(ctx, lines.title, inner - (rightW ? rightW + GAP : 0), titleSize, '600', 34), 60, baseY);
 
   if (lines.subtitle) {
     ctx.fillStyle = GOLD_DIM;
-    ctx.font = font(27, '500');
-    ctx.fillText(lines.subtitle, 60, baseY + 40);
+    ctx.fillText(fit(ctx, lines.subtitle, inner, 27, '500', 20), 60, baseY + 40);
   }
   if (lines.note) {
     ctx.fillStyle = SOFT;
-    ctx.font = font(21, '400');
-    ctx.fillText(lines.note, 60, baseY + 72);
-  }
-  if (lines.right) {
-    ctx.fillStyle = INK;
-    ctx.font = font(38, '600');
-    ctx.textAlign = 'right';
-    ctx.fillText(lines.right, W - 60, baseY);
-    ctx.textAlign = 'left';
+    ctx.fillText(fit(ctx, lines.note, inner, 21, '400', 16), 60, baseY + 72);
   }
 }
 
@@ -213,8 +252,14 @@ export function renderYachtCard(y: Yacht, eyebrow: string, lines: CardLines): Bu
  * drawing and say how many it left out.
  */
 const FLEET_MAX_SHOWN = 24;
-const GRID_TOP = 118;
-const GRID_BOTTOM = 846;
+const GRID_TOP = 104;
+/**
+ * Clear of the caption title, whose capitals rise to about y 834 at 52px. It
+ * was 846 once, and a three-row grid - ten hulls, which is every forge - put
+ * its last row of labels on top of the title. The top and the row gaps gave a
+ * little back so ten hulls keep the size they had.
+ */
+const GRID_BOTTOM = 812;
 
 export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLines, hullCount?: number): Buffer {
   const W = 1000, H = 1000;
@@ -233,8 +278,8 @@ export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLin
     // Fit to both budgets: the width of the card and the height left above the
     // caption, label and gutter included. Whichever is tighter sets the scale.
     const gutter = 20;
-    const labelH = 26;
-    const gapY = 16;
+    const labelH = 24;
+    const gapY = 10;
     const byWidth = Math.floor((W - 120 - (cols - 1) * gutter) / cols);
     const byHeight = Math.floor((GRID_BOTTOM - GRID_TOP) / rows) - labelH - gapY;
     const scale = Math.max(2, Math.floor(Math.min(byWidth, byHeight) / 40));
@@ -292,24 +337,23 @@ export function renderWatchCard(
   chrome(ctx, W, H, eyebrow);
 
   ctx.fillStyle = INK;
-  ctx.font = font(62, '600');
-  ctx.fillText(title, 60, 200);
+  ctx.fillText(fit(ctx, title, W - 120, 62, '600', 36), 60, 200);
 
   if (extras.subtitle) {
     ctx.fillStyle = GOLD_DIM;
-    ctx.font = font(27, '500');
-    ctx.fillText(extras.subtitle, 60, 242);
+    ctx.fillText(fit(ctx, extras.subtitle, W - 120, 27, '500', 20), 60, 242);
   }
 
   let y = extras.subtitle ? 330 : 300;
   for (const [k, v] of rows) {
     ctx.fillStyle = SOFT;
     ctx.font = font(30, '400');
+    const keyW = ctx.measureText(k).width;
     ctx.fillText(k, 60, y);
     ctx.fillStyle = INK;
-    ctx.font = font(46, '600');
+    const value = fit(ctx, v, W - 120 - keyW - GAP, 46, '600', 26);
     ctx.textAlign = 'right';
-    ctx.fillText(v, W - 60, y);
+    ctx.fillText(value, W - 60, y);
     ctx.textAlign = 'left';
     ctx.strokeStyle = 'rgba(61,61,61,0.18)';
     ctx.lineWidth = 1;
@@ -340,9 +384,16 @@ export function renderWatchCard(
   }
 
   if (extras.chips?.length) {
+    const chips = extras.chips;
+    const rowWidth = (size: number): number => {
+      ctx.font = font(size, '500');
+      return chips.reduce((w, [k, v]) => w + ctx.measureText(`${k} ${v}`).width + 34 + 14, -14);
+    };
+    let chipSize = 24;
+    while (chipSize > 16 && rowWidth(chipSize) > W - 120) chipSize -= 1;
     let cx = 60;
-    for (const [k, v] of extras.chips) {
-      ctx.font = font(24, '500');
+    for (const [k, v] of chips) {
+      ctx.font = font(chipSize, '500');
       const label = `${k} ${v}`;
       const w = ctx.measureText(label).width + 34;
       ctx.strokeStyle = GOLD;
@@ -360,17 +411,8 @@ export function renderWatchCard(
 
 /** Long notes (a transaction hash, say) shrink to fit rather than run off the card. */
 function fitNote(ctx: SKRSContext2D, note: string, W: number, y: number): void {
-  const max = W - 120;
-  let size = 22;
   ctx.fillStyle = SOFT;
-  ctx.font = font(size, '400');
-  while (ctx.measureText(note).width > max && size > 15) {
-    size -= 1;
-    ctx.font = font(size, '400');
-  }
-  let text = note;
-  while (ctx.measureText(text).width > max && text.length > 8) text = `${text.slice(0, -2)}…`;
-  ctx.fillText(text, 60, y);
+  ctx.fillText(fit(ctx, note, W - 120, 22, '400', 15), 60, y);
 }
 
 /* ── The captain's log (module J) ─────────────────────────────────────────
@@ -409,12 +451,10 @@ export function renderJournalCard(c: JournalCard): Buffer {
 
   const tx = c.portrait ? 60 + face + 44 : 60;
   ctx.fillStyle = INK;
-  ctx.font = font(46, '600');
-  ctx.fillText(c.name, tx, top + 150);
+  ctx.fillText(fit(ctx, c.name, W - 60 - tx, 46, '600', 28), tx, top + 150);
 
   ctx.fillStyle = GOLD_DIM;
-  ctx.font = font(23, '500');
-  ctx.fillText(c.identity, tx, top + 190);
+  ctx.fillText(fit(ctx, c.identity, W - 60 - tx, 23, '500', 16), tx, top + 190);
 
   const ruleY = top + face + 44;
   ctx.strokeStyle = 'rgba(61,61,61,0.18)';
@@ -438,12 +478,13 @@ export function renderJournalCard(c: JournalCard): Buffer {
     for (const [k, v] of rows) {
       ctx.fillStyle = SOFT;
       ctx.font = font(labelSize, '400');
+      const keyW = ctx.measureText(k).width;
       ctx.fillText(k, 60, y);
 
       ctx.fillStyle = INK;
-      ctx.font = font(valueSize, '600');
+      const value = fit(ctx, v, W - 120 - keyW - GAP, valueSize, '600', 22);
       ctx.textAlign = 'right';
-      ctx.fillText(v, W - 60, y);
+      ctx.fillText(value, W - 60, y);
       ctx.textAlign = 'left';
 
       ctx.strokeStyle = 'rgba(61,61,61,0.14)';

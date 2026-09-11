@@ -221,18 +221,18 @@ async function postDailyMark(last: DailyDraw, marks: number, force = false): Pro
     l.warn(`could not read the marked hull #${id}`, e);
   }
 
-  const note = `${fmtInt(last.entries)} entered · block ${fmtInt(block)}`;
+  const note = `${fmtInt(last.entries)} entered · block ${fmtInt(block)} · ${last.day}`;
   const media = y
     ? renderYachtCard(y, 'the daily tide', {
-      title: `Yacht #${id} marked`,
+      title: `Yacht #${id}`,
       subtitle: `${grade(y)}${y.rarityRank != null ? ` · rank ${y.rarityRank}` : ''}`,
       note,
-      right: last.day,
+      right: 'marked',
     })
     : renderWatchCard(
       [['Marked', `#${id}`], ['Entered', fmtInt(last.entries)], ['Marks in the register', fmtInt(marks)]],
       'the daily tide',
-      `The daily draw · ${last.day}`,
+      'The daily draw',
       note,
     );
 
