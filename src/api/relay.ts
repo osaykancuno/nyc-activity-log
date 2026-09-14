@@ -42,7 +42,16 @@ export interface TideRound {
   prize: string;
   /** Set when the announced prize changed after the round was announced. */
   prizeWas: string | null;
-  cost: number;
+  /**
+   * One flat price a yacht. Rounds up to 5 had it; from round 6 it is null and
+   * the price follows the yacht's grade instead - see costLadder. Printing it
+   * bare published "null Anchor Points a Yacht".
+   */
+  cost: number | null;
+  /** AP for one unit of weight in the draw, so a point buys the same chance in every grade. */
+  costPerWeight?: number | null;
+  /** What one yacht costs to enter, by grade, e.g. { Cruiser: 250, Commodore: 3000 }. */
+  costLadder?: Record<string, number> | null;
   cap: number;
   /** The minimum CAPTAINS for a round to be drawn at all. Never a hull count. */
   floor: number;

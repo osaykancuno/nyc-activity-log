@@ -96,7 +96,7 @@ export function sweepPost(
     ].join('\n');
   };
 
-  for (let shown = ids.length; shown >= 4; shown--) {
+  for (let shown = ids.length; shown >= Math.min(4, ids.length); shown--) {
     const candidate = build(shown);
     if (tweetLength(candidate) <= 272) return candidate;
   }
@@ -309,8 +309,18 @@ const utcWhen = (ms: number): string => {
   return `${logDate(d)}, ${hh}:${mm} UTC`;
 };
 
+/**
+ * What entering a round costs, in the shape the relay published it. Since round
+ * 6 a yacht's price follows its grade; before that there was one flat price.
+ */
+export type TideCost =
+  | { kind: 'ladder'; ladder: [grade: string, ap: number][] }
+  | { kind: 'flat'; ap: number }
+  | { kind: 'per-weight'; ap: number }
+  | { kind: 'unknown' };
+
 export interface TideOpen {
-  id: number; prize: string; cost: number; cap: number; floor: number;
+  id: number; prize: string; cost: TideCost; cap: number; floor: number;
   commits: number; hulls: number; captains: number | null; closesAt: number;
   /** The captain count that adds a further prize, and the ceiling on prizes. */
   extraAt: number | null; maxPrizes: number | null;
@@ -326,22 +336,45 @@ export function tideOpenPost(t: TideOpen): string {
     ? `${fmtInt(t.maxPrizes!)} prizes if ${fmtInt(t.extraAt)} captains enter.`
     : null;
 
-  const build = (withExtra: boolean): string =>
+  const rules = `${t.cap} per captain \u00b7 ${t.floor} captains to float the round.`;
+  // Never a price the relay did not send: an unknown cost drops the figure, it
+  // does not print "null".
+  const costLines = ((): string[] => {
+    const c = t.cost;
+    switch (c.kind) {
+      case 'ladder':
+        return [
+          `AP a Yacht: ${c.ladder.map(([g, ap]) => `${g} ${fmtInt(ap)}`).join(' \u00b7 ')}`,
+          `Max ${rules}`,
+        ];
+      case 'flat': return [`${fmtInt(c.ap)} Anchor Points a Yacht \u00b7 max ${rules}`];
+      case 'per-weight': return [`${fmtInt(c.ap)} Anchor Points per point of weight \u00b7 max ${rules}`];
+      default: return [`Max ${rules}`];
+    }
+  })();
+  // A price by grade is what makes a point buy the same chance in every grade.
+  const moral = t.cost.kind === 'flat' || t.cost.kind === 'unknown'
+    ? 'Points cannot buy better odds. \u2693'
+    : 'Same chance per point in every grade. \u2693';
+
+  const build = (withExtra: boolean, withMoral: boolean): string =>
     [
       `The Tide \u00b7 round ${t.id} is open.`,
       `For ${prizeName(t.prize)}.`,
       '',
-      `${t.cost} Anchor Points a Yacht \u00b7 max ${t.cap} per captain \u00b7 ${t.floor} captains to float the round.`,
+      ...costLines,
       ...(withExtra && extra ? [extra] : []),
       `Closes ${utcWhen(t.closesAt)}.`,
       '',
-      'Points cannot buy better odds. \u2693',
+      withMoral ? moral : '\u2693',
     ].join('\n');
 
-  for (const candidate of [build(true), build(false)]) {
+  // Room is given up in this order: the closing sentence, then the second-prize
+  // line. The price, the rules and the closing time never move.
+  for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
     if (tweetLength(candidate) <= 272) return candidate;
   }
-  return truncateTweet(build(false));
+  return truncateTweet(build(false, false));
 }
 
 export interface TideWinnerLine {

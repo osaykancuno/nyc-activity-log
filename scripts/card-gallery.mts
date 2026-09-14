@@ -51,7 +51,7 @@ const cards: [string, Buffer][] = [
     right: 'island',
   }, 10)],
   ['tide open', renderWatchCard(
-    [['Prize', 'forging slot'], ['Cost per Yacht', '1,000 AP'], ['Captains entered', '1,234'], ['Yachts entered', '3,702'], ['Prizes', '2 at 30 captains']],
+    [['Prize', 'yacht'], ['Cost per weight', '1,250 AP'], ['Captains entered', '1,234'], ['Yachts entered', '3,702'], ['Prizes', '2 at 30 captains']],
     'the tide', 'Round 12',
     'Closes 2026-12-13 18:00 UTC · max 3 per captain · 3 captains to float',
   )],

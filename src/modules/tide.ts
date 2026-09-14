@@ -4,7 +4,7 @@ import { getDailyTide, getTide, type DailyDraw, type TideRound, type TideWinner 
 import type { Yacht } from '../api/nyc';
 import { enqueue } from '../poster';
 import { renderFleetCard, renderWatchCard, renderYachtCard } from '../render/card';
-import { dailyMarkPost, tideOpenPost, tideSettledPost, type TideWinnerLine } from '../templates';
+import { dailyMarkPost, tideOpenPost, tideSettledPost, type TideCost, type TideWinnerLine } from '../templates';
 import { classBreakdown, fmtInt, grade } from '../util';
 import { resolveYacht } from '../yacht';
 import { alreadyPosted, markPosted } from '../store';
@@ -66,15 +66,35 @@ function winnersOf(r: TideRound): TideWinner[] {
   return r.winner ? [r.winner] : [];
 }
 
+/**
+ * What a round costs to enter. Round 6 replaced the flat `cost` with a price by
+ * grade (`costLadder`) and left `cost` null - and the open post printed "null".
+ * The ladder wins when present, cheapest grade first; a figure the relay did
+ * not send is left out, never guessed.
+ */
+export function costOf(r: Pick<TideRound, 'id' | 'cost' | 'costLadder' | 'costPerWeight'>): TideCost {
+  const ladder = Object.entries(r.costLadder ?? {})
+    .filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1]))
+    .sort((a, b) => a[1] - b[1]);
+  if (ladder.length) return { kind: 'ladder', ladder };
+  if (typeof r.cost === 'number' && Number.isFinite(r.cost)) return { kind: 'flat', ap: r.cost };
+  if (typeof r.costPerWeight === 'number' && Number.isFinite(r.costPerWeight)) return { kind: 'per-weight', ap: r.costPerWeight };
+  l.warn(`round ${r.id}: the relay sent no price - the open post leaves it out`);
+  return { kind: 'unknown' };
+}
+
 async function onOpen(r: TideRound, force = false): Promise<void> {
   // Captains are what a round runs on: three of them float it, and thirty turn
   // one prize into two. Yachts only carry the weight they entered with.
   const extraAt = r.winnerAt?.length ? r.winnerAt[0]! : null;
   const maxPrizes = r.maxWinners ?? null;
 
+  const cost = costOf(r);
   const rows: [string, string][] = [
     ['Prize', String(r.prize).replace(/-/g, ' ')],
-    ['Cost per Yacht', `${fmtInt(r.cost)} AP`],
+    // The post carries the price of each grade; the card adds the rule behind it.
+    ...(cost.kind === 'flat' ? [['Cost per Yacht', `${fmtInt(cost.ap)} AP`] as [string, string]] : []),
+    ...(r.costPerWeight != null ? [['Cost per weight', `${fmtInt(r.costPerWeight)} AP`] as [string, string]] : []),
     ['Captains entered', fmtInt(r.captains ?? 0)],
     ['Yachts entered', fmtInt(r.fleet?.length ?? 0)],
   ];
@@ -93,7 +113,7 @@ async function onOpen(r: TideRound, force = false): Promise<void> {
     key: force ? `tide:open:${r.id}:preview:${Date.now()}` : `tide:open:${r.id}`,
     kind: 'tide-open',
     text: tideOpenPost({
-      id: r.id, prize: r.prize, cost: r.cost, cap: r.cap, floor: r.floor,
+      id: r.id, prize: r.prize, cost, cap: r.cap, floor: r.floor,
       commits: r.commits, hulls: r.fleet?.length ?? 0, captains: r.captains ?? null,
       closesAt: r.closesAt, extraAt, maxPrizes,
     }),
