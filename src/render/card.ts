@@ -316,6 +316,48 @@ export function renderFleetCard(yachts: Yacht[], eyebrow: string, lines: CardLin
   return canvas.toBuffer('image/png');
 }
 
+/**
+ * A forge: the island large, and under it the yachts it was forged from.
+ *
+ * The first forge went out on a fleet card of ten yachts - which is what a
+ * sweep looks like - beside a second post that drew the island as a yacht. The
+ * island is the news, so it gets the picture; the yachts are its pedigree.
+ */
+export function renderIslandCard(
+  island: { art: { bits: string; on: string } },
+  yachts: Yacht[],
+  eyebrow: string,
+  lines: CardLines,
+  hullCount?: number,
+): Buffer {
+  const W = 1000, H = 1000;
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  chrome(ctx, W, H, eyebrow);
+
+  const scale = 15;
+  drawBits(ctx, island.art.bits, (W - 40 * scale) / 2, 100, scale, island.art.on || ON);
+
+  // One row of yachts under it, as large as the row allows and never below 1:1.
+  const STRIP_TOP = 724, MIN_GAP = 6;
+  const room = W - 120;
+  const fits = Math.floor((room + MIN_GAP) / (40 + MIN_GAP));
+  const shown = yachts.slice(0, fits);
+  const n = shown.length;
+  if (n > 0) {
+    const s = Math.max(1, Math.min(2, Math.floor((room - (n - 1) * MIN_GAP) / n / 40)));
+    const size = 40 * s;
+    const gap = n > 1 ? Math.min(24, (room - n * size) / (n - 1)) : 0;
+    const left = 60 + (room - (n * size + (n - 1) * gap)) / 2;
+    shown.forEach((y, i) => drawBits(ctx, y.art.bits, left + i * (size + gap), STRIP_TOP, s, y.art.on || ON));
+  }
+
+  const hidden = (hullCount ?? yachts.length) - n;
+  const note = hidden > 0 ? `${lines.note ? `${lines.note} · ` : ''}${hidden} more not pictured` : lines.note;
+  caption(ctx, W, { ...lines, note }, 52, 872);
+  return canvas.toBuffer('image/png');
+}
+
 /** Numbers only: the watch card. No art, because no single hull owns the watch. */
 export interface WatchExtras {
   bar?: { label: string; value: number; total: number };

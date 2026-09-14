@@ -135,8 +135,10 @@ async function preview(args: string[]): Promise<void> {
       }));
 
     case 'forge':
+      // preview forge 57,150,244 1000000 - the yachts burned, then the island minted
       return handleEvent(fakeEvent({
         kind: 'forge', tokenIds: arg.split(',').map(Number), blockNumber: block,
+        islandIds: [Number(extra ?? club.islands.idBase)],
         from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
       }));
 

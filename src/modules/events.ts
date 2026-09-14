@@ -2,10 +2,11 @@ import type { ChainEvent } from '../chain/classify';
 import { ensName } from '../chain/client';
 import { log } from '../logger';
 import { enqueue } from '../poster';
-import { renderFleetCard, renderYachtCard } from '../render/card';
+import { renderFleetCard, renderIslandCard, renderYachtCard } from '../render/card';
 import { claimPost, forgePost, salePost, sweepPost } from '../templates';
-import { classBreakdown, fmtEth, fmtInt, grade, shortAddr, who } from '../util';
-import { resolveFleet, resolveYacht } from '../yacht';
+import { classBreakdown, fmtEth, fmtInt, grade, who } from '../util';
+import { resolveFleet, resolveIsland, resolveYacht } from '../yacht';
+import { islandFacts } from './forge';
 
 const l = log('events');
 
@@ -85,22 +86,40 @@ async function onSweep(ev: ChainEvent): Promise<void> {
   });
 }
 
+/** One forge, one post: the island, its grade, and the yachts it was forged from. */
 async function onForge(ev: ChainEvent): Promise<void> {
   const ids = [...ev.tokenIds].sort((a, b) => a - b);
-  const { yachts, missing } = await resolveFleet(ids);
-  const ens = await ensName(ev.from);
+  const islandIds = ev.islandIds ?? [];
+  const first = islandIds[0];
 
-  const media = renderFleetCard(yachts, 'forge', {
-    title: `${fmtInt(ids.length)} Yachts burned`,
-    subtitle: missing.length ? '' : classBreakdown(yachts.map(grade)),
-    note: `by ${who(ev.from, ens)} \u00b7 ${shortAddr(ev.txHash)}`,
-    right: 'island',
-  }, ids.length);
+  const [{ yachts, missing }, ens, island, facts] = await Promise.all([
+    resolveFleet(ids),
+    ensName(ev.from),
+    first != null
+      ? resolveIsland(first).catch((e) => { l.warn(`island #${first}: tokenURI unreadable, drawing its yachts instead`, e); return null; })
+      : Promise.resolve(null),
+    // A grade belongs to one island; a transaction that forged several prints none.
+    islandIds.length === 1 ? islandFacts(first!) : Promise.resolve(null),
+  ]);
+
+  const title = islandIds.length === 1 ? `Island #${first}` : `${fmtInt(islandIds.length)} islands`;
+  const from = missing.length ? `${fmtInt(ids.length)} Yachts` : classBreakdown(yachts.map(grade));
+  const note = [
+    `by ${who(ev.from, ens)}`,
+    facts?.residents != null ? `${fmtInt(facts.residents)} residents` : '',
+    facts?.services != null ? `${fmtInt(facts.services)} services` : '',
+    island?.plot != null ? `plot ${island.plot}` : '',
+  ].filter(Boolean).join(' \u00b7 ');
+  const lines = { title, subtitle: `forged from ${from}`, note, right: facts?.grade ?? 'forged' };
+
+  const media = island
+    ? renderIslandCard(island, yachts, 'the forge', lines, ids.length)
+    : renderFleetCard(yachts, 'the forge', lines, ids.length);
 
   enqueue({
     key: ev.key,
     kind: 'forge',
-    text: forgePost(ids, yachts, { addr: ev.from, ens }, ev.blockNumber),
+    text: forgePost(islandIds, ids, yachts, { addr: ev.from, ens }, ev.blockNumber, facts),
     media,
     priority: ev.priority,
   });

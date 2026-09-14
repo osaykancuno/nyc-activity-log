@@ -94,8 +94,10 @@
       "Estate",
       "Flagship"
     ],
+    "idBase": 1000000,
+    "_idBaseSource": "RELAY /islands idBase, read 14 Sep 2026: islandId = idBase + plot. Islands are tokens of this same contract; every yacht id is below it.",
     "gradeThresholds": null,
-    "gradeThresholdsNote": "NOT published by the club. Never invent them. Pedigree prints the raw weight sum only.",
+    "gradeThresholdsNote": "The club publishes each island's grade on RELAY /islands and the bands on /activation (since the first forge, 14 Sep 2026). The log prints the relay's grade and never works one out itself.",
     "visitors": "never limited",
     "headStartEndsAt": "2026-09-15T12:00:00Z",
     "_source": "Live phase at RELAY /forge. Never trust these dates over the relay."

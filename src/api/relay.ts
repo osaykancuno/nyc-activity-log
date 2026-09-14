@@ -140,6 +140,32 @@ export interface Forge {
   slot: unknown;
 }
 
+/**
+ * One forged island, from /islands. That route also carries `owner`; it is
+ * ownerOf on a public token, but this log names the captain from the forge
+ * transaction itself and never from a register, so it is not typed here.
+ */
+export interface IslandRecord {
+  islandId: number | string;
+  plot: number;
+  /** Null means the club could not establish it just then - never that the island has none. */
+  grade: string | null;
+  score: number | null;
+  residents: number | null;
+  services: number | null;
+  awake: boolean | null;
+}
+
+/** What waking one island costs: its grade score x 100 AP, paid once. */
+export interface IslandActivation {
+  islandId: string;
+  awake: boolean;
+  score: number | null;
+  band: string | null;
+  price: number | null;
+  currency: string | null;
+}
+
 export interface RelayStats { afloat: number; members: number; yachts: number; at: number }
 
 export interface ChandleryCatalog {
@@ -200,6 +226,9 @@ export const getForge = () => get<Forge>('/forge', 5 * 60_000);
 export const getRelayStats = () => get<RelayStats>('/stats', 60_000);
 export const getChandlery = () => get<ChandleryCatalog>('/chandlery', 6 * 60 * 60_000);
 export const getRegatta = () => get<RegattaSeason>('/regatta', 30 * 60_000);
+/** Read right after a forge, when the island may not be graded yet - so the cache is short. */
+export const getIslands = () => get<{ islands: IslandRecord[]; idBase: number }>('/islands', 30_000);
+export const getActivation = (islandId: number) => get<IslandActivation>(`/activation/${islandId}`, 30_000);
 
 /** Is the relay answering at all? Used by preflight. */
 export async function relayHealth(): Promise<string | null> {

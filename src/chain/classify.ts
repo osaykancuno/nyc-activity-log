@@ -1,7 +1,6 @@
 import { config } from '../config';
-import { runtime } from '../runtime';
 import { log } from '../logger';
-import { isZero, ethNumber } from '../util';
+import { isIsland, isZero, ethNumber } from '../util';
 import { priceFromReceipt, type Currency, type PriceInfo, type PriceSource } from './sales';
 import { publicClient } from './client';
 import type { TransferRow, TxGroup } from './watcher';
@@ -17,6 +16,8 @@ export interface ChainEvent {
   blockNumber: bigint;
   at: Date;
   tokenIds: number[];
+  /** A forge only: the islands minted. `tokenIds` are then the yachts burned for them. */
+  islandIds?: number[];
   from: `0x${string}`;
   to: `0x${string}`;
   priceWei?: bigint;           // total for the event
@@ -31,15 +32,18 @@ export interface ChainEvent {
  * Turn one transaction into zero or more publishable events.
  *
  * Rules, in the club's own terms:
- *  - from 0x0                    -> a hull is born (claim)
- *  - to 0x0, 10 hulls, one wallet-> a forge (island). Only when the module is on.
+ *  - a yacht from 0x0           -> a hull is born (claim)
+ *  - an island from 0x0          -> a forge: the island and the yachts its captain
+ *                                   burned in the same transaction, as ONE event
  *  - a proven payment            -> a sale, or a sweep if the same captain took several
  *  - anything else               -> not our business. No listing spam, no dump watching.
  */
 export async function classify(g: TxGroup): Promise<ChainEvent[]> {
   const out: ChainEvent[] = [];
 
-  const claims = g.transfers.filter((t) => isZero(t.from));
+  const mints = g.transfers.filter((t) => isZero(t.from));
+  const claims = mints.filter((t) => !isIsland(t.tokenId));
+  const islands = mints.filter((t) => isIsland(t.tokenId));
   const burns = g.transfers.filter((t) => isZero(t.to));
   const moves = g.transfers.filter((t) => !isZero(t.from) && !isZero(t.to));
 
@@ -53,18 +57,38 @@ export async function classify(g: TxGroup): Promise<ChainEvent[]> {
     });
   }
 
-  if (burns.length > 0 && runtime.forgeArmed) {
-    const byOwner = new Map<string, bigint[]>();
-    for (const b of burns) byOwner.set(b.from, [...(byOwner.get(b.from) ?? []), b.tokenId]);
-    for (const [owner, ids] of byOwner) {
+  // The island's own mint is what proves a forge, so this no longer waits for
+  // the relay to arm it. On 14 Sep 2026 the first forge went out as two posts:
+  // the burns as a forge, and the island's mint as a yacht claim.
+  if (islands.length > 0 && config.modules.forge !== false) {
+    const byCaptain = new Map<string, { to: `0x${string}`; islandIds: number[] }>();
+    for (const i of islands) {
+      const k = i.to.toLowerCase();
+      const e = byCaptain.get(k) ?? { to: i.to, islandIds: [] };
+      e.islandIds.push(Number(i.tokenId));
+      byCaptain.set(k, e);
+    }
+    for (const [k, { to, islandIds }] of byCaptain) {
+      const burned = burns.filter((b) => b.from.toLowerCase() === k).map((b) => Number(b.tokenId)).sort((a, b) => a - b);
       out.push({
         kind: 'forge',
-        key: `forge:${g.txHash}:${owner}`,
+        key: `forge:${g.txHash}:${to}`,
         txHash: g.txHash, blockNumber: g.blockNumber, at: g.timestamp,
-        tokenIds: ids.map(Number), from: owner as `0x${string}`, to: '0x0000000000000000000000000000000000000000',
+        tokenIds: burned, islandIds: islandIds.sort((a, b) => a - b),
+        from: to, to: '0x0000000000000000000000000000000000000000',
         priority: 95,
       });
     }
+  } else if (burns.length > 0 && islands.length === 0) {
+    l.info(`${g.txHash}: ${burns.length} yacht(s) burned and no island minted - not a forge, nothing to publish`);
+  }
+
+  // An island changing hands is not a yacht sale, and the sale post can only
+  // describe a yacht. Until the log has an island sale of its own, it is silent.
+  const islandMoves = moves.filter((m) => isIsland(m.tokenId));
+  if (islandMoves.length) {
+    l.info(`${g.txHash}: island ${islandMoves.map((m) => `#${m.tokenId}`).join(', ')} moved - not published as a yacht`);
+    moves.splice(0, moves.length, ...moves.filter((m) => !isIsland(m.tokenId)));
   }
 
   if (moves.length === 0 || (!config.modules.sale && !config.modules.sweep)) return out;

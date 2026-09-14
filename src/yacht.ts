@@ -33,7 +33,10 @@ export async function resolveYacht(id: number): Promise<Yacht> {
     if (chain.art.bits !== api.art.bits) l.info(`#${id}: on-chain art differs from the API snapshot - using the chain`);
     return { ...api, art: chain.art };
   } catch (e) {
-    l.warn(`#${id}: tokenURI unavailable, falling back to the API snapshot for the picture`, e);
+    // A burned yacht has no tokenURI any more - every forge reads ten of them -
+    // so one line each, not a stack trace each.
+    const why = String((e as { shortMessage?: string })?.shortMessage ?? (e as Error)?.message ?? e).split('\n')[0];
+    l.warn(`#${id}: tokenURI unavailable (${why}), using the API snapshot for the picture`);
     return { ...api, art: { ...api.art, from: 'api' } };
   }
 }
@@ -142,6 +145,38 @@ export async function fromChain(id: number): Promise<Yacht> {
     traits,
     art: { size: 40, on, off, onPixels: (bits.match(/1/g) ?? []).length, bits, from: 'chain' },
     source: 'chain',
+  };
+}
+
+export interface Island {
+  id: number;
+  plot: number | null;
+  /** How many yachts the token says it was forged from. */
+  forgedFrom: number | null;
+  art: Yacht['art'];
+}
+
+/**
+ * An island's own token. Same contract, same tokenURI, same 40x40 grid as a
+ * yacht - but no Normie, no class and no Anchor Points, so it is never read as
+ * one: `fromChain` would call it a Cruiser born from Normie #0.
+ */
+export async function resolveIsland(id: number): Promise<Island> {
+  const uri = await publicClient.readContract({
+    address: NYC, abi: nycAbi, functionName: 'tokenURI', args: [BigInt(id)],
+  });
+  const meta = JSON.parse(decodeDataUri(uri));
+
+  const attrs = new Map<string, string | number>();
+  for (const a of meta.attributes ?? []) attrs.set(a.trait_type, a.value);
+  const n = (k: string): number | null => (attrs.has(k) ? Number(attrs.get(k)) : null);
+
+  const { bits, on, off } = svgToBits(decodeDataUri(meta.image));
+  return {
+    id,
+    plot: n('Plot'),
+    forgedFrom: n('Forged from yachts'),
+    art: { size: 40, on, off, onPixels: (bits.match(/1/g) ?? []).length, bits, from: 'chain' },
   };
 }
 

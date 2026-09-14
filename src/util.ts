@@ -48,6 +48,14 @@ export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export const ZERO = '0x0000000000000000000000000000000000000000';
 export const isZero = (a: string) => a.toLowerCase() === ZERO;
 
+/**
+ * An island is a token in this same collection, minted in the transaction that
+ * burns its yachts, with ids from idBase up (islandId = idBase + plot). Every
+ * yacht id sits below it. Read as a yacht, island #1000000 went out on 14 Sep
+ * 2026 as "Yacht #1000000 is afloat. Born from the burn of Normie #0. Cruiser".
+ */
+export const isIsland = (id: number | bigint): boolean => Number(id) >= club.islands.idBase;
+
 /** Count classes: { Superyacht: 1, Cruiser: 3 } -> "3 Cruiser \u00b7 1 Superyacht" */
 /**
  * What the club calls this hull. `class` comes from the burned Normie and stops

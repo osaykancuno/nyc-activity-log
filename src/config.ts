@@ -29,6 +29,8 @@ export interface Club {
   islands: {
     seasonIIClosesAt: string; forgeOpensAt: string; forgeClosesAt: string | null;
     hullsPerIsland: number; netSupplyChange: number; grades: string[];
+    /** The first island id. islandId = idBase + plot; every yacht id is below it. */
+    idBase: number;
     gradeThresholds: null | Record<string, number>; gradeThresholdsNote: string; visitors: string;
   };
   voice: { allow: string[]; deny: string[]; maxims: string[]; header: string; footer: string[]; disclaimer: string };

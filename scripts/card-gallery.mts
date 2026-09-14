@@ -11,9 +11,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import {
-  initFonts, renderFleetCard, renderJournalCard, renderWatchCard, renderYachtCard,
+  initFonts, renderFleetCard, renderIslandCard, renderJournalCard, renderWatchCard, renderYachtCard,
 } from '../src/render/card';
-import { resolveFleet, resolveYacht } from '../src/yacht';
+import { resolveFleet, resolveIsland, resolveYacht } from '../src/yacht';
 import { classBreakdown, grade } from '../src/util';
 
 initFonts();
@@ -24,6 +24,7 @@ const sloop = await resolveYacht(1191);       // the hull on the card that went 
 const { yachts: twenty } = await resolveFleet([...Array(20)].map((_, i) => 100 + i * 37));
 const { yachts: ten } = await resolveFleet([...Array(10)].map((_, i) => 200 + i * 41));
 const { yachts: two } = await resolveFleet([1819, 305]);
+const island = await resolveIsland(1000000);    // the first island ever forged, 14 Sep 2026
 
 const cards: [string, Buffer][] = [
   ['claim', renderYachtCard(commodore, 'claim', {
@@ -44,11 +45,11 @@ const cards: [string, Buffer][] = [
     note: '→ longest-captain-name.eth',
     right: '123.4567 ETH',
   }, 20)],
-  ['forge', renderFleetCard(ten, 'forge', {
-    title: '10 Yachts burned',
-    subtitle: classBreakdown(ten.map(grade)),
-    note: 'by longest-captain-name.eth · 0x1234…abcd',
-    right: 'island',
+  ['forge', renderIslandCard(island, ten, 'the forge', {
+    title: 'Island #1000123',
+    subtitle: `forged from ${classBreakdown(ten.map(grade))}`,
+    note: 'by longest-captain-name.eth · 120 residents · 12 services · plot 123',
+    right: 'Flagship',
   }, 10)],
   ['tide open', renderWatchCard(
     [['Prize', 'yacht'], ['Cost per weight', '1,250 AP'], ['Captains entered', '1,234'], ['Yachts entered', '3,702'], ['Prizes', '2 at 30 captains']],

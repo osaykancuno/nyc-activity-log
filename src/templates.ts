@@ -247,22 +247,49 @@ export function pedigreePost(p: PedigreeResult): string {
   return truncateTweet(lines.join('\n'));
 }
 
+/** What the club's relay says about a freshly forged island. Every field may be missing. */
+export interface IslandFacts {
+  grade: string | null;
+  score: number | null;
+  residents: number | null;
+  services: number | null;
+  /** Anchor Points to wake it, once. */
+  wakeAp: number | null;
+}
+
+/**
+ * One post for one forge: the island first, the yachts it cost after. The
+ * grade is the club's own (Cay, Isle, Estate, Flagship from /islands); when the
+ * relay has not graded it yet, the post says nothing about a grade rather than
+ * work one out.
+ */
 export function forgePost(
+  islandIds: number[],
   ids: number[],
   yachts: Yacht[],
   owner: { addr: string; ens: string | null },
   blockNumber: bigint,
+  facts: IslandFacts | null,
 ): string {
   const p = pedigree(yachts);
   const complete = yachts.length === ids.length && yachts.length > 0;
+  const graded = facts?.grade
+    ? [facts.grade, facts.score != null ? `score ${facts.score}` : '', facts.wakeAp != null ? `wakes for ${fmtInt(facts.wakeAp)} ${AP}` : '']
+      .filter(Boolean).join(' \u00b7 ')
+    : '';
   return truncateTweet(
     [
-      'An island is forged.',
-      `${ids.length} Yachts burned by ${who(owner.addr, owner.ens)}.`,
-      // Weight is a sum. Publishing it a hull short would understate it.
-      ...(complete ? [`${p.breakdown} \u00b7 weight ${p.weight}`] : []),
+      islandIds.length === 1
+        ? `Island #${islandIds[0]} is forged.`
+        : `${islandIds.length} islands are forged: ${islandIds.map((i) => `#${i}`).join(' ')}.`,
+      `${fmtInt(ids.length)} Yachts burned by ${who(owner.addr, owner.ens)}.`,
+      // Weight is a sum. Publishing it a hull short would understate it. Beside
+      // the club's own score it would only repeat the same number.
+      ...(complete ? [graded && facts?.score != null ? p.breakdown : `${p.breakdown} \u00b7 weight ${p.weight}`] : []),
+      ...(graded ? [graded] : []),
       '',
-      `Fleet net ${club.islands.netSupplyChange}.`,
+      // From the chain: yachts that left the fleet, less the islands that joined it.
+      `Fleet net ${islandIds.length - ids.length}.`,
       `Block ${fmtBlock(blockNumber)}.`,
       '',
       'Visiting is never limited. \u2693',
