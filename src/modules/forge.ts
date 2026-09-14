@@ -6,6 +6,7 @@ import { renderWatchCard } from '../render/card';
 import { forgeOpenPost } from '../templates';
 import { runtime } from '../runtime';
 import { fmtInt } from '../util';
+import { alreadyPosted, markPosted } from '../store';
 
 const l = log('forge');
 
@@ -35,10 +36,18 @@ export async function runForgeWatch(): Promise<void> {
   if (!open) return;
 
   const opensAt = forge.window?.opensAt ?? null;
+  const key = `forge:open:${opensAt ?? forge.phase}`;
+  if (alreadyPosted(key)) return;
 
-  // Arm quietly if the forge opened long before this log did.
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
-  if (opensAt && Date.now() - opensAt > WEEK) return;
+  // The forge opens once and never closes, so this post can only be news in the
+  // first minutes. Past that, note it and say nothing: a log that restarted with
+  // an empty ledger posted "The forge is open" three times on 14 Sep 2026.
+  const FRESH = 60 * 60 * 1000;
+  if (!opensAt || Date.now() - opensAt > FRESH) {
+    markPosted(key, { kind: 'seed' });
+    l.info(`the forge opened ${opensAt ? new Date(opensAt).toISOString() : 'at an unknown time'} - too long ago to announce, noted`);
+    return;
+  }
   const media = renderWatchCard(
     [
       ['Yachts per island', fmtInt(10)],
@@ -51,7 +60,7 @@ export async function runForgeWatch(): Promise<void> {
   );
 
   enqueue({
-    key: `forge:open:${opensAt ?? forge.phase}`,
+    key,
     kind: 'forge-open',
     text: forgeOpenPost(opensAt),
     media,

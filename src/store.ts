@@ -57,16 +57,48 @@ let state: State = {
   lastWatch: null, journal: emptyJournal(null), startedAt: new Date().toISOString(),
 };
 
+/**
+ * The mount point that holds `dir`, read from /proc/mounts. Null off Linux.
+ *
+ * On 14 Sep 2026 the log was found writing its state inside the container: the
+ * volume was mounted, just not under STATE_DIR, so every deploy started with an
+ * empty ledger and "The forge is open" went out three times in two hours. The
+ * boot log said nothing, because a missing ledger was not worth a line.
+ */
+function mountOf(dir: string): string | null {
+  try {
+    const points = readFileSync('/proc/mounts', 'utf8').split('\n')
+      .map((line) => line.split(' ')[1]?.replace(/\\040/g, ' '))
+      .filter((p): p is string => !!p);
+    return points
+      .filter((p) => p === '/' || dir === p || dir.startsWith(`${p}/`))
+      .sort((a, b) => b.length - a.length)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function initStore(): void {
   mkdirSync(DIR, { recursive: true });
+
+  const mount = mountOf(DIR);
+  if (mount === '/') {
+    l.error(`state in ${DIR} is NOT on a volume - every deploy forgets the ledger, the cursor and the budget. Mount the volume at ${resolve(DIR, '..')} or point STATE_DIR inside it.`);
+  } else if (mount) {
+    l.info(`state in ${DIR}, on the volume mounted at ${mount}`);
+  }
+
+  let rows = 0;
   if (existsSync(LEDGER)) {
-    let rows = 0;
     for (const line of readFileSync(LEDGER, 'utf8').split('\n')) {
       if (!line.trim()) continue;
       try { seen.add(JSON.parse(line).k); rows++; } catch { /* skip torn line */ }
     }
-    l.info(`ledger loaded: ${rows} entries`);
   }
+  // Said either way: an empty ledger on a log that has been live for weeks is
+  // the one line that would have caught the volume.
+  if (rows) l.info(`ledger loaded: ${rows} entries`);
+  else l.warn(`ledger is empty (${LEDGER}) - fine on a first boot, a lost volume on any other`);
   if (existsSync(STATE)) {
     try {
       state = { ...state, ...JSON.parse(readFileSync(STATE, 'utf8')) };
