@@ -19,7 +19,11 @@ export interface State {
   monthKey: string | null;       // "2026-09"
   monthCount: number;
   monthUsd: number;
-  lastWatch: { at: string; afloat: number; fleet: number; unclaimed: number; block?: string } | null;
+  /**
+   * `claimed` is totalMinted(). Watches saved before 14 Sep 2026 have no such
+   * field, and their `afloat` IS totalMinted() - burned yachts not taken out.
+   */
+  lastWatch: { at: string; afloat: number; claimed?: number; fleet: number; unclaimed: number; block?: string } | null;
   journal: Journal;
   startedAt: string;
 }

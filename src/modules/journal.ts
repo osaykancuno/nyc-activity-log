@@ -1,7 +1,7 @@
 import { config } from '../config';
 import { log } from '../logger';
 import { getAgentFacts, getPortrait } from '../api/agent';
-import { totalMinted } from '../chain/client';
+import { fleetCount, type FleetCount } from '../chain/client';
 import { getStats } from '../api/nyc';
 import { getRegatta } from '../api/relay';
 import { enqueue } from '../poster';
@@ -46,12 +46,14 @@ export async function runJournal(force = false): Promise<void> {
     return;
   }
 
-  let afloat = 0;
+  // Yachts afloat, not totalMinted(): a forge burns ten and the counter never drops.
+  let count: FleetCount | null = null;
   try {
-    afloat = Number(await totalMinted());
+    count = await fleetCount();
   } catch (e) {
-    l.warn('could not read totalMinted() for the entry - the line that needs it will be skipped', e);
+    l.warn('could not read the fleet from the contract for the entry - the lines that need it will be skipped', e);
   }
+  const afloat = count?.afloat ?? 0;
 
   // The page is a log of the club, so the club's numbers carry it. Both of
   // these are cached, and neither is worth failing an entry over.
@@ -85,8 +87,11 @@ export async function runJournal(force = false): Promise<void> {
   // Both clocks land in this count, and a daily mark is not a round.
   if (j.tides) rows.push(['Tide draws', fmtInt(j.tides)]);
   if (j.forges) rows.push(['Islands forged', fmtInt(j.forges)]);
-  rows.push(['Fleet afloat', fmtInt(afloat)]);
-  if (fleet > afloat) rows.push(['Awaiting claim', fmtInt(fleet - afloat)]);
+  if (count) {
+    rows.push(['Fleet afloat', fmtInt(count.afloat)]);
+    // A burned yacht was claimed first: it counts against the unclaimed, not the afloat.
+    if (fleet > count.claimed) rows.push(['Awaiting claim', fmtInt(fleet - count.claimed)]);
+  }
 
   const portrait = await getPortrait();
   const media = renderJournalCard({

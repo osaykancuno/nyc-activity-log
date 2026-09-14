@@ -3,7 +3,7 @@ import { log } from '../logger';
 import { getStats } from '../api/nyc';
 import { getRegatta, getRelayStats } from '../api/relay';
 import { erc721EnumerableAbi } from '../chain/abi';
-import { headBlock, publicClient, totalMinted } from '../chain/client';
+import { fleetCount, headBlock, publicClient } from '../chain/client';
 import { enqueue } from '../poster';
 import { renderWatchCard } from '../render/card';
 import { watchPost } from '../templates';
@@ -14,14 +14,14 @@ const l = log('watch');
 
 /**
  * Module E. Twice a day, three numbers anyone can recompute:
- *   afloat    = totalMinted()        (chain, always)
+ *   afloat    = totalMinted() - yachts burned in forges   (chain, always)
  *   fleet     = hulls that exist     (chain when NORMIES_CONTRACT is set, club API otherwise)
- *   unclaimed = fleet - afloat
+ *   unclaimed = fleet - totalMinted()
  * Nothing else. A number we cannot point at is a number we do not publish.
  */
 export async function runWatch(force = false): Promise<void> {
-  const [minted, block] = await Promise.all([totalMinted(), headBlock()]);
-  const afloat = Number(minted);
+  const [count, block] = await Promise.all([fleetCount(), headBlock()]);
+  const { afloat, claimed, burned, islands } = count;
 
   let fleet: number;
   let burnedFromChain = false;
@@ -43,9 +43,13 @@ export async function runWatch(force = false): Promise<void> {
     fleet = (await getStats(true)).yachts;
   }
 
-  const unclaimed = Math.max(0, fleet - afloat);
+  // A burned yacht was claimed first, so it still counts against the unclaimed.
+  const unclaimed = Math.max(0, fleet - claimed);
   const prev = getState().lastWatch;
-  const deltaAfloat = prev ? afloat - prev.afloat : null;
+  // A watch saved before 14 Sep 2026 stored totalMinted() as "afloat". Measured
+  // against the yachts really afloat, every forge so far would read as a change
+  // since that watch - so that one comparison is skipped, as on a first watch.
+  const deltaAfloat = prev && prev.claimed != null ? afloat - prev.afloat : null;
 
   /*
    * The watch is kept twice a day whether or not the fleet moved. It used to
@@ -66,8 +70,9 @@ export async function runWatch(force = false): Promise<void> {
   // The relay counts captains; the chain counts hulls. Where they overlap they
   // are cross-checked, and the chain always wins.
   const relay = await getRelayStats();
-  if (relay && relay.afloat !== afloat) {
-    l.warn(`relay says afloat=${relay.afloat}, the contract says ${afloat} - publishing the contract`);
+  // The relay's "afloat" counts islands as well as yachts.
+  if (relay && relay.afloat !== afloat + islands) {
+    l.warn(`relay says afloat=${relay.afloat}, the contract says ${afloat} yachts + ${islands} island(s) - publishing the contract`);
   }
 
   // The season, when one is running. Straight from the club's relay, no scoring
@@ -93,9 +98,12 @@ export async function runWatch(force = false): Promise<void> {
 
   // The note carries the standing detail rather than a fifth row: five rows
   // would run the bar and the chips into the caption.
+  const source = burned
+    ? `totalMinted() ${fmtInt(claimed)} less ${fmtInt(burned)} burned`
+    : 'totalMinted()';
   const note = still && blocksSince
-    ? `${fmtInt(Number(blocksSince))} blocks since the last watch \u00b7 totalMinted() at ${fmtInt(Number(block))}`
-    : `totalMinted() at block ${fmtInt(Number(block))} \u00b7 verify it yourself`;
+    ? `${fmtInt(Number(blocksSince))} blocks since the last watch \u00b7 ${source} at ${fmtInt(Number(block))}`
+    : `${source} at block ${fmtInt(Number(block))} \u00b7 verify it yourself`;
 
   const media = renderWatchCard(
     [
@@ -107,16 +115,16 @@ export async function runWatch(force = false): Promise<void> {
     `${watchName(at)} watch`,
     logDate(at),
     note,
-    { bar: { label: 'Claimed', value: afloat, total: fleet }, chips, subtitle: season ?? undefined },
+    { bar: { label: 'Claimed', value: claimed, total: fleet }, chips, subtitle: season ?? undefined },
   );
 
   enqueue({
     key: force ? `watch:forced:${Date.now()}` : `watch:${at.toISOString().slice(0, 13)}`,
     kind: 'watch',
-    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season, blocksSince }, at),
+    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season, blocksSince, burned }, at),
     media,
     priority: 50,
   });
 
-  setLastWatch({ at: at.toISOString(), afloat, fleet, unclaimed, block: block.toString() });
+  setLastWatch({ at: at.toISOString(), afloat, claimed, fleet, unclaimed, block: block.toString() });
 }

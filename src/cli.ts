@@ -4,7 +4,7 @@ import { log } from './logger';
 import { initStore } from './store';
 import { initFonts, renderYachtCard } from './render/card';
 import { getStats } from './api/nyc';
-import { headBlock, totalMinted, publicClient } from './chain/client';
+import { fleetCount, headBlock, totalMinted, publicClient } from './chain/client';
 import { classify, type ChainEvent } from './chain/classify';
 import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
@@ -53,9 +53,10 @@ async function verify(): Promise<void> {
   const stats = await getStats(true);
   console.log(`  club API      ok   fleet ${fmtInt(stats.yachts)}, snapshot ${stats.generatedAt}`);
 
-  const [block, minted] = await Promise.all([headBlock(), totalMinted()]);
+  const [block, minted, count] = await Promise.all([headBlock(), totalMinted(), fleetCount()]);
   console.log(`  rpc           ok   head block ${fmtInt(Number(block))}`);
   console.log(`  contract      ok   totalMinted() = ${fmtInt(Number(minted))} (${fmtInt(stats.yachts - Number(minted))} awaiting claim)`);
+  console.log(`  fleet         ok   ${fmtInt(count.islands)} island(s) forged, ${fmtInt(count.burned)} yachts burned, ${fmtInt(count.afloat)} afloat`);
 
   const y = await resolveYacht(1709);
   console.log(`  metadata      ok   #${y.id} ${grade(y)}, facts from the ${y.source === 'chain' ? 'contract' : 'club API'}`);
@@ -76,10 +77,11 @@ async function verify(): Promise<void> {
       const opens = forge.window?.opensAt ? new Date(forge.window.opensAt).toISOString().slice(0, 16).replace('T', ' ') : 'unannounced';
       console.log(`  forge         ok   phase "${forge.phase}", opens ${opens} UTC, ${forge.forged} forged`);
     }
-    if (rstats && rstats.afloat !== Number(minted)) {
-      console.log(`  cross-check   --   relay says afloat ${rstats.afloat}, the contract says ${minted}. The contract wins.`);
+    // The relay's afloat counts islands too.
+    if (rstats && rstats.afloat !== count.afloat + count.islands) {
+      console.log(`  cross-check   --   relay says afloat ${rstats.afloat}, the contract says ${count.afloat} yachts + ${count.islands} island(s). The contract wins.`);
     } else if (rstats) {
-      console.log(`  cross-check   ok   relay and contract agree: ${rstats.afloat} afloat, ${rstats.members} captains`);
+      console.log(`  cross-check   ok   relay and contract agree: ${count.afloat} yachts + ${count.islands} island(s) afloat, ${rstats.members} captains`);
     }
     if (chandlery?.catalog) {
       const drift = Object.entries(chandlery.catalog)

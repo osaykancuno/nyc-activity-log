@@ -114,6 +114,8 @@ export interface WatchNumbers {
   regatta?: string | null;
   /** Blocks since the previous watch. Null on the first watch of a new state file. */
   blocksSince?: bigint | null;
+  /** Yachts burned in forges, already taken out of `afloat`. */
+  burned?: number;
 }
 
 /**
@@ -135,7 +137,9 @@ export function watchPost(n: WatchNumbers, at: Date): string {
 }
 
 function movingWatch(n: WatchNumbers, at: Date): string {
-  const delta = n.deltaAfloat === null ? '' : n.deltaAfloat === 0 ? '' : ` (+${fmtInt(n.deltaAfloat)})`;
+  // A forge takes yachts out of the fleet, so the change can be negative now.
+  const delta = !n.deltaAfloat ? '' : ` (${n.deltaAfloat > 0 ? '+' : ''}${fmtInt(n.deltaAfloat)})`;
+  const source = n.burned ? `totalMinted() less ${fmtInt(n.burned)} burned, at block` : 'totalMinted() at block';
   const fleetLabel = n.burnedFromChain ? 'Born from burns' : 'Fleet on record';
 
   const build = (season: boolean, invite: boolean): string =>
@@ -148,7 +152,7 @@ function movingWatch(n: WatchNumbers, at: Date): string {
       `Awaiting claim: ${fmtInt(n.unclaimed)}`,
       ...(season && n.regatta ? [n.regatta] : []),
       '',
-      `totalMinted() at block ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
+      `${source} ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
       '',
       club.voice.footer[0],
       club.voice.footer[1],
