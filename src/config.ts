@@ -117,12 +117,17 @@ export const config = {
 
   minSaleEth: num('MIN_SALE_ETH', 0),
   /**
-   * Hulls to one captain in one transaction, at or above which the log stops
-   * writing an entry per hull and writes a single sweep instead. Below it every
-   * hull gets its own post - which is what a log is - and above it one post
-   * carries the lot, which is what a budget is.
+   * Hulls to one captain in one transaction that make a single sweep post
+   * instead of one post each. Fixed at 2 since 14 Sep 2026, on the user's call:
+   * one captain buying several yachts at once is one moment, and one post.
+   *
+   * No longer read from the environment on purpose. Railway still carries
+   * SWEEP_MIN=5 from the old rule, and an env value beats a code default - so a
+   * default of 2 would have changed nothing in production. Boot warns if the
+   * variable is still set.
    */
-  sweepMin: Math.max(2, num('SWEEP_MIN', 5)),
+  sweepMin: 2,
+  sweepMinEnvIgnored: str('SWEEP_MIN', '') !== '',
   /*
    * The schedule runs on European clock time, not on fixed UTC.
    *

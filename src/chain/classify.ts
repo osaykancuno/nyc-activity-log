@@ -119,13 +119,12 @@ export async function classify(g: TxGroup): Promise<ChainEvent[]> {
  * part that decides what the timeline actually looks like, so it is testable on
  * its own - `npm run tools:sales-split` covers it.
  *
- * A log records hulls, not baskets. Two or three yachts taken in one
- * transaction are two or three things that happened, and each gets its own
- * entry with its own hull, its own seller and its own price. The single sweep
- * post exists for where that stops being true: a captain taking SWEEP_MIN hulls
- * at once is one event, and posting it as twenty would flood the timeline and
- * cost twenty times as much. That threshold is the only thing separating a log
- * from a bill.
+ * One captain buying several yachts in one transaction is one moment, and gets
+ * one sweep post carrying every hull and the total. From 2 to 14 Sep 2026
+ * anything under five went out one post per hull; the user folded them into a
+ * single post, because three posts about one click cost three times as much and
+ * read as three events. A lone hull is still a sale with its own seller and
+ * price, and two captains in one transaction are still judged separately.
  */
 export function salesFrom(
   g: Pick<TxGroup, 'txHash' | 'blockNumber' | 'timestamp'>,

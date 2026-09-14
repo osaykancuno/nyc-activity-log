@@ -25,7 +25,7 @@ for (const [name, expr] of [
   const [, h] = expr.split(' ');
   console.log(`  ${name.padEnd(15)} "${expr}"   ${pad(+h)}:00 local  =  ${pad(+h - off)}:00 UTC now, ${pad(+h - winter)}:00 UTC in winter`);
 }
-console.log(`\n  SWEEP_MIN               ${config.sweepMin}   (below this, one post per hull)`);
+console.log(`\n  sweep at                ${config.sweepMin} yachts   (one captain, one transaction, one post)${config.sweepMinEnvIgnored ? '  - SWEEP_MIN is set and ignored' : ''}`);
 console.log(`  journal module          ${config.modules.journal}`);
 console.log(`  entry on quiet days     ${config.journalOnQuietDays}`);
 console.log(`  watch module            ${config.modules.watch}   (now posts even when nothing moved)`);

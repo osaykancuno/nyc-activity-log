@@ -1,16 +1,15 @@
 /**
  * What the timeline looks like when several hulls move in one transaction.
  *
- * This is the decision that separates a log from a bill, so it is checked
- * rather than assumed: below SWEEP_MIN every hull is its own entry with its own
- * seller and price; at or above it, one sweep post carries the lot.
+ * Checked rather than assumed: a lone hull is its own sale entry with its own
+ * seller and price; two or more to one captain in one transaction are one sweep
+ * post carrying the lot (since 14 Sep 2026 - before, anything under five went
+ * out one post per hull).
  */
 import { parseEther, formatEther } from 'viem';
 
-// Pin the threshold before anything reads the environment, so this checks the
-// logic and not whichever SWEEP_MIN happens to sit in .env. dotenv does not
-// overwrite a value already present in process.env.
-process.env.SWEEP_MIN = process.env.SWEEP_MIN_TEST ?? '5';
+// Set the old variable on purpose: it must no longer move the threshold.
+process.env.SWEEP_MIN = '5';
 
 const { salesFrom } = await import('../src/chain/classify.ts');
 const { config } = await import('../src/config.ts');
@@ -41,7 +40,9 @@ const check = (name, ok, detail) => {
   if (!ok) failures++;
 };
 
-console.log(`\n  SWEEP_MIN = ${config.sweepMin}\n`);
+console.log(`\n  sweep at ${config.sweepMin} yachts\n`);
+check('SWEEP_MIN=5 in the environment does not move the threshold off 2', config.sweepMin === 2, String(config.sweepMin));
+check('  and boot knows it was set, so it can warn', config.sweepMinEnvIgnored === true);
 
 // One hull, one entry. The base case must not have moved.
 {
@@ -51,19 +52,25 @@ console.log(`\n  SWEEP_MIN = ${config.sweepMin}\n`);
   check('  carries its hull and price', out[0]?.tokenIds[0] === 1709 && formatEther(out[0].priceWei) === '2.4');
 }
 
-// Three hulls, one buyer: three entries, each with its own seller and price.
+// Two hulls, one buyer, one transaction: one post, not two.
+{
+  const [moves, price] = scene([[44, BUYER_A, 2.2, 2], [12, BUYER_A, 1.1, 1]]);
+  const out = salesFrom(g, moves, price);
+  check('two hulls to one captain are one sweep', out.length === 1 && out[0].kind === 'sweep', `${out.length} event(s)`);
+  check('  both hulls on it, in order', out[0]?.tokenIds.join(',') === '12,44');
+  check('  the total is the sum', formatEther(out[0].priceWei) === '3.3');
+  check('  each hull keeps its own price', out[0]?.pricePerToken?.get(12) === parseEther('1.1'));
+}
+
+// Three hulls, one buyer: still one post.
 {
   const [moves, price] = scene([[12, BUYER_A, 1.1, 1], [44, BUYER_A, 2.2, 2], [101, BUYER_A, 3.3, 3]]);
   const out = salesFrom(g, moves, price);
-  check('three hulls to one captain are three entries', out.length === 3 && out.every((e) => e.kind === 'sale'), `${out.length} event(s)`);
-  check('  each entry names one hull', out.every((e) => e.tokenIds.length === 1));
-  check('  each keeps its own price', out.map((e) => formatEther(e.priceWei)).join(',') === '1.1,2.2,3.3');
-  check('  each keeps its own seller', new Set(out.map((e) => e.from)).size === 3);
-  check('  dedup keys are distinct', new Set(out.map((e) => e.key)).size === 3, out.map((e) => e.key.split(':').pop()).join(','));
-  check('  no hull is dropped', out.flatMap((e) => e.tokenIds).sort((a, b) => a - b).join(',') === '12,44,101');
+  check('three hulls to one captain are one sweep', out.length === 1 && out[0].kind === 'sweep', `${out.length} event(s)`);
+  check('  no hull is dropped', out[0]?.tokenIds.join(',') === '12,44,101');
 }
 
-// At the threshold: one post, every hull on it.
+// Five: one post, every hull on it.
 {
   const spec = [12, 44, 101, 205, 309].map((id, i) => [id, BUYER_A, 1, i]);
   const [moves, price] = scene(spec);
@@ -73,17 +80,15 @@ console.log(`\n  SWEEP_MIN = ${config.sweepMin}\n`);
   check('  the total is the sum', formatEther(out[0].priceWei) === '5');
 }
 
-// Two captains in one transaction, four hulls each way.
+// Two captains in one transaction: one takes a single hull, the other two.
 {
-  const [moves, price] = scene([
-    [12, BUYER_A, 1, 1], [44, BUYER_A, 1, 2],
-    [101, BUYER_B, 1, 3], [205, BUYER_B, 1, 4], [309, BUYER_B, 1, 5], [412, BUYER_B, 1, 6], [517, BUYER_B, 1, 7],
-  ]);
+  const [moves, price] = scene([[12, BUYER_A, 1, 1], [101, BUYER_B, 1, 3], [205, BUYER_B, 1, 4]]);
   const out = salesFrom(g, moves, price);
   const sales = out.filter((e) => e.kind === 'sale');
   const sweeps = out.filter((e) => e.kind === 'sweep');
-  check('buyers are judged separately', sales.length === 2 && sweeps.length === 1, `${sales.length} sale(s), ${sweeps.length} sweep(s)`);
-  check('  the sweep is the one over the threshold', sweeps[0]?.tokenIds.length === 5);
+  check('buyers are judged separately', sales.length === 1 && sweeps.length === 1, `${sales.length} sale(s), ${sweeps.length} sweep(s)`);
+  check('  the lone hull is a sale, the pair a sweep', sales[0]?.tokenIds[0] === 12 && sweeps[0]?.tokenIds.join(',') === '101,205');
+  check('  dedup keys are distinct', new Set(out.map((e) => e.key)).size === 2);
 }
 
 // A hull with no provable price is not published, and does not take the rest down.
@@ -91,7 +96,7 @@ console.log(`\n  SWEEP_MIN = ${config.sweepMin}\n`);
   const [moves, price] = scene([[12, BUYER_A, 1, 1], [44, BUYER_A, 2, 2]]);
   moves.push({ from: seller(9), to: BUYER_A, tokenId: 999n, logIndex: 9 }); // no entry in byToken
   const out = salesFrom(g, moves, price);
-  check('an unpriced hull is skipped, the rest survive', out.length === 2 && !out.some((e) => e.tokenIds.includes(999)));
+  check('an unpriced hull is skipped, the rest survive', out.length === 1 && out[0].tokenIds.join(',') === '12,44');
 }
 
 console.log(`\n  ${failures ? `${failures} FAILURE(S)` : 'all checks passed'}\n`);

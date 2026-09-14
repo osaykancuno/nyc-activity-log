@@ -47,6 +47,7 @@ function banner(): void {
   l.info(`modules on : ${on.join(', ') || 'none'}`);
   l.info(`modules off: ${off.join(', ') || 'none'}`);
   l.info(`rpc: ${config.rpcUrls.map(redactUrl).join(' , ')}`);
+  if (config.sweepMinEnvIgnored) l.warn('SWEEP_MIN is still set but no longer read: 2+ yachts to one captain in one transaction are always one sweep post. Delete it from the variables.');
   l.info(`rules: sweep at ${config.sweepMin}+ hulls to one captain \u00b7 ${config.confirmations} confirmations \u00b7 poll ${Math.round(config.pollIntervalMs / 1000)}s \u00b7 min sale ${config.minSaleEth} ETH`);
 
   // A zero here is almost always a variable that was deleted rather than a
