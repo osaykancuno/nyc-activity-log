@@ -47,9 +47,9 @@ const emptyJournal = (day: string | null): Journal => ({
   day, claims: 0, moved: 0, tides: 0, forges: 0, lastEntryDay: null, recent: [],
 });
 
-const DIR = config.paths.state;
-const LEDGER = resolve(DIR, 'posted.jsonl');
-const STATE = resolve(DIR, 'state.json');
+let DIR = config.paths.state;
+let LEDGER = resolve(DIR, 'posted.jsonl');
+let STATE = resolve(DIR, 'state.json');
 
 const seen = new Set<string>();
 let state: State = {
@@ -60,10 +60,11 @@ let state: State = {
 /**
  * The mount point that holds `dir`, read from /proc/mounts. Null off Linux.
  *
- * On 14 Sep 2026 the log was found writing its state inside the container: the
- * volume was mounted, just not under STATE_DIR, so every deploy started with an
- * empty ledger and "The forge is open" went out three times in two hours. The
- * boot log said nothing, because a missing ledger was not worth a line.
+ * On 14 Sep 2026 the log was found writing its state to /app/data/state, inside
+ * the container: the volume was mounted, just not under STATE_DIR, so every
+ * deploy started with an empty ledger and "The forge is open" went out three
+ * times in two hours. The boot log said nothing, because a missing ledger was
+ * not worth a line.
  */
 function mountOf(dir: string): string | null {
   try {
@@ -78,32 +79,71 @@ function mountOf(dir: string): string | null {
   }
 }
 
+/**
+ * Longer than the widest normal gap between two posts (the 19:00 UTC entry to
+ * the 07:00 UTC watch is 12 hours). A ledger whose newest line is older than
+ * this was not being written to - it is the one left on a volume the log had
+ * stopped using, and it knows nothing about what went out since.
+ */
+const STALE_MS = 18 * 60 * 60 * 1000;
+
 export function initStore(): void {
+  // Railway names its own volume. If STATE_DIR points off it, the volume is the
+  // right answer and the setting is the mistake: use the volume and say so.
+  const volume = process.env.RAILWAY_VOLUME_MOUNT_PATH?.trim();
+  if (volume && mountOf(DIR) === '/' && mountOf(volume) === volume) {
+    const onVolume = resolve(volume, 'state');
+    l.warn(`STATE_DIR ${DIR} is not on the volume - using ${onVolume} instead. Set STATE_DIR=${onVolume} (or delete it) to silence this.`);
+    DIR = onVolume;
+    LEDGER = resolve(DIR, 'posted.jsonl');
+    STATE = resolve(DIR, 'state.json');
+  }
+
   mkdirSync(DIR, { recursive: true });
 
   const mount = mountOf(DIR);
   if (mount === '/') {
-    l.error(`state in ${DIR} is NOT on a volume - every deploy forgets the ledger, the cursor and the budget. Mount the volume at ${resolve(DIR, '..')} or point STATE_DIR inside it.`);
+    l.error(`state in ${DIR} is NOT on a volume - every deploy forgets the ledger, the cursor and the budget. Mount a volume and point STATE_DIR inside it.`);
   } else if (mount) {
     l.info(`state in ${DIR}, on the volume mounted at ${mount}`);
   }
 
   let rows = 0;
+  let newest = 0;
   if (existsSync(LEDGER)) {
     for (const line of readFileSync(LEDGER, 'utf8').split('\n')) {
       if (!line.trim()) continue;
-      try { seen.add(JSON.parse(line).k); rows++; } catch { /* skip torn line */ }
+      try {
+        const row = JSON.parse(line) as { k: string; t?: string };
+        seen.add(row.k);
+        rows++;
+        const t = row.t ? Date.parse(row.t) : NaN;
+        if (Number.isFinite(t) && t > newest) newest = t;
+      } catch { /* skip torn line */ }
     }
   }
   // Said either way: an empty ledger on a log that has been live for weeks is
   // the one line that would have caught the volume.
-  if (rows) l.info(`ledger loaded: ${rows} entries`);
+  if (rows) l.info(`ledger loaded: ${rows} entries, newest ${newest ? new Date(newest).toISOString() : 'undated'}`);
   else l.warn(`ledger is empty (${LEDGER}) - fine on a first boot, a lost volume on any other`);
+
   if (existsSync(STATE)) {
     try {
       state = { ...state, ...JSON.parse(readFileSync(STATE, 'utf8')) };
       state.journal = { ...emptyJournal(null), ...(state.journal ?? {}) };
     } catch (e) { l.warn('state unreadable, starting fresh', e); }
+  }
+
+  // A stale ledger is worse than an empty one: it has the old keys but not the
+  // posts made since, so the Tide would announce a round already announced and
+  // the watcher would replay days of blocks. Treat it as a first look instead -
+  // every module seeds silently - and keep only what cannot repeat a post.
+  if (rows && newest && Date.now() - newest > STALE_MS) {
+    l.warn(`ledger is stale (newest line ${new Date(newest).toISOString()}) - starting from the chain head and re-seeding the Tide, so nothing is posted twice`);
+    for (const k of ['tide:seeded', 'tide:daily:seeded']) seen.delete(k);
+    state.lastBlock = null;
+    state.lastWatch = null;
+    persistState();
   }
   rollMonth();
 }
