@@ -70,9 +70,12 @@ export async function runWatch(force = false): Promise<void> {
   // The relay counts captains; the chain counts hulls. Where they overlap they
   // are cross-checked, and the chain always wins.
   const relay = await getRelayStats();
-  // The relay's "afloat" counts islands as well as yachts.
-  if (relay && relay.afloat !== afloat + islands) {
-    l.warn(`relay says afloat=${relay.afloat}, the contract says ${afloat} yachts + ${islands} island(s) - publishing the contract`);
+  // What the relay counts as "afloat" has moved under us: 819 = 818 yachts + 1
+  // island on 14 Sep 2026, 808 = the yachts alone on 16 Sep. The contract is
+  // published either way; only a figure that is neither is worth a warning.
+  if (relay && relay.afloat !== afloat) {
+    if (relay.afloat === afloat + islands) l.info(`relay counts its ${islands} island(s) in afloat=${relay.afloat}; this log publishes ${afloat} yachts`);
+    else l.warn(`relay says afloat=${relay.afloat}, the contract says ${afloat} yachts (${islands} island(s) besides) - publishing the contract`);
   }
 
   // The season, when one is running. Straight from the club's relay, no scoring

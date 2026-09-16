@@ -108,6 +108,7 @@ async function onForge(ev: ChainEvent): Promise<void> {
     `by ${who(ev.from, ens)}`,
     facts?.residents != null ? `${fmtInt(facts.residents)} residents` : '',
     facts?.services != null ? `${fmtInt(facts.services)} services` : '',
+    facts?.apPerDay != null ? `${fmtInt(facts.apPerDay)} AP/day` : '',
     island?.plot != null ? `plot ${island.plot}` : '',
   ].filter(Boolean).join(' \u00b7 ');
   const lines = { title, subtitle: `forged from ${from}`, note, right: facts?.grade ?? 'forged' };

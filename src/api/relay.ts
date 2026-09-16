@@ -153,6 +153,8 @@ export interface IslandRecord {
   score: number | null;
   residents: number | null;
   services: number | null;
+  /** Anchor Points the island earns a day. Published by the club from ~15 Sep 2026. */
+  anchorPointsPerDay?: number | null;
   awake: boolean | null;
 }
 
@@ -162,7 +164,10 @@ export interface IslandActivation {
   awake: boolean;
   score: number | null;
   band: string | null;
-  price: number | null;
+  /** What waking it WILL cost, while it sleeps. */
+  price?: number | null;
+  /** What it DID cost: the route swaps the field once the island is awake. */
+  pricePaid?: number | null;
   currency: string | null;
 }
 

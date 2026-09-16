@@ -48,7 +48,7 @@ const cards: [string, Buffer][] = [
   ['forge', renderIslandCard(island, ten, 'the forge', {
     title: 'Island #1000123',
     subtitle: `forged from ${classBreakdown(ten.map(grade))}`,
-    note: 'by longest-captain-name.eth · 120 residents · 12 services · plot 123',
+    note: 'by longest-captain-name.eth · 120 residents · 12 services · 1,200 AP/day · plot 123',
     right: 'Flagship',
   }, 10)],
   ['tide open', renderWatchCard(

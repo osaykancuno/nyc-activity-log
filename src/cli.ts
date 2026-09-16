@@ -75,13 +75,16 @@ async function verify(): Promise<void> {
     }
     if (forge) {
       const opens = forge.window?.opensAt ? new Date(forge.window.opensAt).toISOString().slice(0, 16).replace('T', ' ') : 'unannounced';
-      console.log(`  forge         ok   phase "${forge.phase}", opens ${opens} UTC, ${forge.forged} forged`);
+      console.log(`  forge         ok   phase "${forge.phase}", opens ${opens} UTC, ${count.islands} forged${forge.forged === count.islands ? '' : ` (relay still says ${forge.forged})`}`);
     }
-    // The relay's afloat counts islands too.
-    if (rstats && rstats.afloat !== count.afloat + count.islands) {
-      console.log(`  cross-check   --   relay says afloat ${rstats.afloat}, the contract says ${count.afloat} yachts + ${count.islands} island(s). The contract wins.`);
+    // What the relay counts as afloat has moved: yachts plus islands on 14 Sep
+    // 2026, the yachts alone on 16 Sep. The contract wins either way.
+    if (rstats && rstats.afloat === count.afloat) {
+      console.log(`  cross-check   ok   relay and contract agree: ${count.afloat} yachts afloat, ${rstats.members} captains`);
+    } else if (rstats && rstats.afloat === count.afloat + count.islands) {
+      console.log(`  cross-check   ok   relay counts its ${count.islands} island(s) too (${rstats.afloat}); the log publishes ${count.afloat} yachts`);
     } else if (rstats) {
-      console.log(`  cross-check   ok   relay and contract agree: ${count.afloat} yachts + ${count.islands} island(s) afloat, ${rstats.members} captains`);
+      console.log(`  cross-check   --   relay says afloat ${rstats.afloat}, the contract says ${count.afloat} yachts (${count.islands} island(s) besides). The contract wins.`);
     }
     if (chandlery?.catalog) {
       const drift = Object.entries(chandlery.catalog)

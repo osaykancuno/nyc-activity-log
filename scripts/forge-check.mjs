@@ -89,7 +89,7 @@ const y = (g) => ({ class: g === 'Commodore' ? 'Superyacht' : g, tier: g });
 const yachts = [...Array(8)].map(() => y('Sloop')).concat([y('Superyacht'), y('Superyacht')]);
 const owner = { addr: CAPTAIN, ens: null };
 {
-  const facts = { grade: 'Isle', score: 26, residents: 26, services: 2, wakeAp: 2600 };
+  const facts = { grade: 'Isle', score: 26, residents: 26, services: 2, apPerDay: 260, wakeAp: 2600, awake: false };
   const text = forgePost([1000000], BURNED, yachts, owner, 25_976_968n, facts);
   console.log(`\n${text}\n`);
   check('the post opens on the island', text.startsWith('Island #1000000 is forged.'));
@@ -104,9 +104,22 @@ const owner = { addr: CAPTAIN, ens: null };
   const text = forgePost([1000000], BURNED, yachts, owner, 25_976_968n, null);
   check('ungraded: no grade invented, the weight stays', !/Cay|Isle|Estate|Flagship/.test(text) && text.includes('weight 26'));
 }
+// An island woken between the forge and the post: /activation swaps its
+// price field for pricePaid, and the post says paid rather than will cost.
+{
+  const awake = { grade: 'Isle', score: 26, residents: 26, services: 2, apPerDay: 260, wakeAp: 2600, awake: true };
+  const text = forgePost([1000000], BURNED, yachts, owner, 25_976_968n, awake);
+  check('an already awake island says what was paid', text.includes('2,600 Anchor Points paid to wake it') && !text.includes('wakes for'));
+}
+// The club published anchorPointsPerDay on /islands around 15 Sep 2026.
+{
+  const noCost = { grade: 'Flagship', score: 78, residents: 78, services: 4, apPerDay: 780, wakeAp: null, awake: false };
+  const text = forgePost([1000001], BURNED, yachts, owner, 25_977_890n, noCost);
+  check('no wake cost: the grade and score still go out', text.includes('Flagship \u00b7 score 78') && !/wakes for|paid to wake/.test(text));
+}
 {
   const long = { addr: CAPTAIN, ens: 'a-very-long-captain-name-that-someone-registered.eth' };
-  const text = forgePost([1000000], BURNED, yachts, long, 25_976_968n, { grade: 'Flagship', score: 120, residents: 120, services: 12, wakeAp: 12000 });
+  const text = forgePost([1000000], BURNED, yachts, long, 25_976_968n, { grade: 'Flagship', score: 120, residents: 120, services: 12, apPerDay: 1200, wakeAp: 12000, awake: false });
   check('a long ENS still fits', tweetLength(text) <= 275, `${tweetLength(text)} chars`);
 }
 

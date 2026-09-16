@@ -21,12 +21,18 @@ export async function islandFacts(islandId: number, tries = 4): Promise<IslandFa
     const row = (await getIslands())?.islands?.find((i) => Number(i.islandId) === islandId);
     if (row?.grade) {
       const act = await getActivation(islandId);
+      // /activation publishes a price while the island sleeps and pricePaid
+      // once it is awake. Reading only the first lost the figure entirely for
+      // an island whose captain woke it before this post was built.
+      const ap = act?.currency === 'AP' ? act.price ?? act.pricePaid ?? null : null;
       return {
         grade: row.grade,
         score: row.score ?? null,
         residents: row.residents ?? null,
         services: row.services ?? null,
-        wakeAp: act?.currency === 'AP' && act.price != null ? act.price : null,
+        apPerDay: row.anchorPointsPerDay ?? null,
+        wakeAp: ap,
+        awake: Boolean(act?.awake),
       };
     }
     if (attempt < tries) {
@@ -76,10 +82,13 @@ export async function runForgeWatch(): Promise<void> {
     l.info(`the forge opened ${opensAt ? new Date(opensAt).toISOString() : 'at an unknown time'} - too long ago to announce, noted`);
     return;
   }
+  // The relay's own forge.forged was still 0 with two islands standing
+  // (16 Sep 2026), so the register itself is asked instead.
+  const forged = (await getIslands())?.islands?.length ?? forge.forged ?? 0;
   const media = renderWatchCard(
     [
       ['Yachts per island', fmtInt(10)],
-      ['Islands forged', fmtInt(forge.forged ?? 0)],
+      ['Islands forged', fmtInt(forged)],
       ['Fleet net', '-9'],
     ],
     'the forge',

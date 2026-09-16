@@ -257,8 +257,11 @@ export interface IslandFacts {
   score: number | null;
   residents: number | null;
   services: number | null;
-  /** Anchor Points to wake it, once. */
+  /** Anchor Points the island earns a day. */
+  apPerDay: number | null;
+  /** Anchor Points to wake it, once - or what was paid, if it is awake already. */
   wakeAp: number | null;
+  awake: boolean;
 }
 
 /**
@@ -277,9 +280,14 @@ export function forgePost(
 ): string {
   const p = pedigree(yachts);
   const complete = yachts.length === ids.length && yachts.length > 0;
+  // A freshly forged island sleeps, so the cost is a price. One woken between
+  // the forge and this post has already paid it, and /activation says so by
+  // swapping its price field for pricePaid.
+  const cost = facts?.wakeAp == null ? ''
+    : facts.awake ? `${fmtInt(facts.wakeAp)} ${AP} paid to wake it`
+    : `wakes for ${fmtInt(facts.wakeAp)} ${AP}`;
   const graded = facts?.grade
-    ? [facts.grade, facts.score != null ? `score ${facts.score}` : '', facts.wakeAp != null ? `wakes for ${fmtInt(facts.wakeAp)} ${AP}` : '']
-      .filter(Boolean).join(' \u00b7 ')
+    ? [facts.grade, facts.score != null ? `score ${facts.score}` : '', cost].filter(Boolean).join(' \u00b7 ')
     : '';
   return truncateTweet(
     [
