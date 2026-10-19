@@ -144,13 +144,26 @@ export function watchPost(n: WatchNumbers, at: Date): string {
   return still ? stillWatch(n, at) : movingWatch(n, at);
 }
 
+/**
+ * The season line, full or compact. "The Autumn Passage Regatta, day 1 of 21."
+ * (season 4, from 19 Oct 2026) is five characters longer than the season before
+ * it, and a watch with movement in it dropped the line altogether to fit. The
+ * compact form keeps it: "Autumn Passage Regatta, day 1/21."
+ */
+type SeasonForm = 'full' | 'short' | false;
+function seasonLine(regatta: string | null | undefined, form: SeasonForm): string[] {
+  if (!regatta || !form) return [];
+  if (form === 'full') return [regatta];
+  return [regatta.replace(/^The /, '').replace(/day (\d+) of (\d+)/, 'day $1/$2')];
+}
+
 function movingWatch(n: WatchNumbers, at: Date): string {
   // A forge takes yachts out of the fleet, so the change can be negative now.
   const delta = !n.deltaAfloat ? '' : ` (${n.deltaAfloat > 0 ? '+' : ''}${fmtInt(n.deltaAfloat)})`;
   const source = n.burned ? `totalMinted() less ${fmtInt(n.burned)} burned, at block` : 'totalMinted() at block';
   const fleetLabel = n.burnedFromChain ? 'Born from burns' : 'Fleet on record';
 
-  const build = (season: boolean, invite: boolean): string =>
+  const build = (season: SeasonForm, invite: boolean): string =>
     [
       club.voice.header,
       logEntryLine(at),
@@ -159,7 +172,7 @@ function movingWatch(n: WatchNumbers, at: Date): string {
       ...(n.claimClosed
         ? [`Islands: ${fmtInt(n.islands ?? 0)} · the claim is closed`]
         : [`${fleetLabel}: ${fmtInt(n.fleet)}`, `Awaiting claim: ${fmtInt(n.unclaimed)}`]),
-      ...(season && n.regatta ? [n.regatta] : []),
+      ...seasonLine(n.regatta, season),
       '',
       `${source} ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
       '',
@@ -168,8 +181,9 @@ function movingWatch(n: WatchNumbers, at: Date): string {
     ].join('\n');
 
   // Room is given up in this order: the invitation to check first (it is manners),
-  // then the season (it is context). The numbers and the sign-off never move.
-  for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
+  // then the season's long form, then the season (it is context). The numbers
+  // and the sign-off never move.
+  for (const candidate of [build('full', true), build('full', false), build('short', false), build(false, false)]) {
     if (tweetLength(candidate) <= 272) return candidate;
   }
   return truncateTweet(build(false, false), 272);
@@ -177,7 +191,7 @@ function movingWatch(n: WatchNumbers, at: Date): string {
 
 /** Nothing changed hands. Say what did, and say the standing figures once. */
 function stillWatch(n: WatchNumbers, at: Date): string {
-  const build = (season: boolean, invite: boolean): string =>
+  const build = (season: SeasonForm, invite: boolean): string =>
     [
       club.voice.header,
       logEntryLine(at),
@@ -186,7 +200,7 @@ function stillWatch(n: WatchNumbers, at: Date): string {
       n.claimClosed
         ? `Afloat ${fmtInt(n.afloat)} \u00b7 islands ${fmtInt(n.islands ?? 0)}`
         : `Afloat ${fmtInt(n.afloat)} \u00b7 awaiting claim ${fmtInt(n.unclaimed)}`,
-      ...(season && n.regatta ? [n.regatta] : []),
+      ...seasonLine(n.regatta, season),
       '',
       `Read at block ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
       '',
@@ -194,7 +208,7 @@ function stillWatch(n: WatchNumbers, at: Date): string {
       club.voice.footer[1],
     ].join('\n');
 
-  for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
+  for (const candidate of [build('full', true), build('full', false), build('short', false), build(false, false)]) {
     if (tweetLength(candidate) <= 272) return candidate;
   }
   return truncateTweet(build(false, false), 272);

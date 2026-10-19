@@ -17,6 +17,8 @@ const cases = [
   ['still, no season', { afloat: 824, fleet: 2703, unclaimed: 1879, deltaAfloat: 0, burnedFromChain: false, block: 25886919n, regatta: null, blocksSince: 1247n }, at],
   // After a forge: ten yachts left the fleet, so afloat went down.
   ['after a forge', { afloat: 818, fleet: 2705, unclaimed: 1877, deltaAfloat: -10, burnedFromChain: false, block: 25977500n, regatta: season, blocksSince: 3614n, burned: 10 }, evening],
+  // Season 4's name is longer than season 2's: the line must survive a moving watch.
+  ['moving, a long season name', { afloat: 838, fleet: 3006, unclaimed: 2128, deltaAfloat: 1, burnedFromChain: false, block: 26227139n, regatta: 'The Autumn Passage Regatta, day 12 of 21.', blocksSince: 3614n, burned: 40 }, at],
   // After 2 Nov 2026 12:00 UTC: mintOpen() is false and nothing awaits a claim.
   ['claim closed, moving', { afloat: 890, fleet: 3020, unclaimed: 2130, deltaAfloat: -10, burnedFromChain: true, block: 26300000n, regatta: season, blocksSince: 3614n, burned: 50, claimClosed: true, islands: 5 }, at],
   ['claim closed, still', { afloat: 890, fleet: 3020, unclaimed: 2130, deltaAfloat: 0, burnedFromChain: true, block: 26300000n, regatta: season, blocksSince: 3614n, burned: 50, claimClosed: true, islands: 5 }, evening],
@@ -29,8 +31,9 @@ for (const [name, n, when] of cases) {
   const len = tweetLength(text);
   if (len > 280) bad++;
   if (/\+-|\(\+0\)|null|undefined|NaN/.test(text)) { console.log(`  BAD TEXT in "${name}"`); bad++; }
+  if (n.regatta && !/Regatta, day/.test(text)) { console.log(`  "${name}": the season line was dropped`); bad++; }
   if (n.claimClosed && /awaiting|Born from burns/i.test(text)) { console.log(`  "${name}": a closed claim has no queue`); bad++; }
-  if (n.burned && n.deltaAfloat && !/\(-10\)/.test(text)) { console.log(`  "${name}": a forge should print (-10)`); bad++; }
+  if (n.deltaAfloat === -10 && !/\(-10\)/.test(text)) { console.log(`  "${name}": a forge should print (-10)`); bad++; }
   if (seen.has(text)) { console.log(`  DUPLICATE: "${name}" is identical to "${seen.get(text)}"`); bad++; }
   seen.set(text, name);
   console.log(`\n── ${name} ${'─'.repeat(30)} ${len} chars${len > 280 ? '  OVER LIMIT' : ''}\n${text}`);
