@@ -15,7 +15,13 @@
     "network": "ethereum-mainnet",
     "deployBlock": 25514828,
     "standard": "ERC-721",
-    "normiesSupplyCap": 10000
+    "normiesSupplyCap": 10000,
+    "claim": {
+      "burnsCountUntil": "2026-11-01T12:00:00Z",
+      "closesAt": "2026-11-02T12:00:00Z",
+      "reopenable": false,
+      "note": "After the close a yacht not claimed is never built: the fleet IS the yachts afloat, and it can only shrink (a forge burns ten and mints one). The code reads mintOpen() on the contract; these dates are the fallback, from llms.txt and RELAY /claims/status, read 19 Oct 2026."
+    }
   },
   "agents": {
     "standard": "ERC-6551",
@@ -62,12 +68,12 @@
       "entriesPerCaptain": 1,
       "closeUTC": "00:00",
       "minHoldBlocks": 7200,
-      "note": "One hull marked by an unforeseeable block. Mark is permanent.",
+      "note": "One token marked by an unforeseeable block - a yacht or, since islands exist, an island (island #1000000 was marked on 17 Oct 2026). Mark is permanent.",
       "misses": "A draw can end marking nobody even with entries in it - the relay publishes those days with yachtId null and the club does not say why. Never invent a reason for one.",
-      "published": "Only the most recent draw carries its block and hash (RELAY /tide/daily, field last). The history rows carry neither, so they are not republishable."
+      "published": "Only the most recent draw carries its block and hash (RELAY /tide/daily, field last). The history rows carry neither, so they are not republishable.",
+      "acceptsBoth": "One signature can enter the daily draw and keep the Regatta watch together (RELAY /tide/daily acceptsBoth). The log signs nothing; it only reads the result."
     },
     "sunday": {
-      "costPerHull": 100,
       "minCaptains": 3,
       "maxHullsPerWallet": 3,
       "weight": "class",
@@ -77,13 +83,21 @@
       "secondPrizeAtCaptains": 30,
       "prizes": "NFTs only since 4 September 2026. Moorings, naming rights and Tide Marks have left the Tide: the Regatta hands out standing, the Tide hands out property.",
       "note": "Captains are counted, never yachts. Three float a round, thirty make it hand out two prizes instead of one, and a captain who wins leaves the pool with every yacht they entered - so a second prize is drawn from a smaller pool than the first.",
-      "earlyEnd": "The club's own docs say a round always runs its full week and cannot be ended early. The relay publishes callable and earlyCall regardless; neither is republished here, and the relay is what the code reads."
+      "earlyEnd": "The club's own docs say a round always runs its full week and cannot be ended early. The relay publishes callable and earlyCall regardless; neither is republished here, and the relay is what the code reads.",
+      "costPerWeight": 250,
+      "costLadder": {
+        "Cruiser": 250,
+        "Sloop": 500,
+        "Superyacht": 1250,
+        "Commodore": 3000
+      },
+      "costNote": "Since round 6 (13 Sep 2026) the price follows the yacht’s grade, in proportion to its weight, so a point buys the same chance in every grade. /tide sends cost: null beside costLadder.",
+      "unfloated": "A round that closes short of minCaptains is not drawn. Round 8 closed on 4 Oct 2026 with 2 captains; the relay opens the next round in its own time."
     },
     "dormant": "No NFT in the club's prize wallet means no round opens at all. The relay says so in dormant and counts what is waiting in potCount.",
-    "_source": "Live round at RELAY /tide, re-read 6 September 2026. The relay is authoritative; these are the fallback."
+    "_source": "Live round at RELAY /tide, re-read 19 October 2026. The relay is authoritative; these are the fallback."
   },
   "islands": {
-    "seasonIIClosesAt": "2026-09-14T11:40:15Z",
     "forgeOpensAt": "2026-09-14T12:00:00Z",
     "forgeClosesAt": null,
     "hullsPerIsland": 10,
@@ -96,11 +110,16 @@
     ],
     "idBase": 1000000,
     "_idBaseSource": "RELAY /islands idBase, read 14 Sep 2026: islandId = idBase + plot. Islands are tokens of this same contract; every yacht id is below it.",
-    "gradeThresholds": null,
-    "gradeThresholdsNote": "The club publishes each island's grade on RELAY /islands and the bands on /activation (since the first forge, 14 Sep 2026). The log prints the relay's grade and never works one out itself.",
+    "gradeThresholds": {
+      "Cay": 10,
+      "Isle": 21,
+      "Estate": 46,
+      "Flagship": 76
+    },
+    "gradeThresholdsNote": "Lowest score of each grade, from RELAY /activation bands (Cay 10-20, Isle 21-45, Estate 46-75, Flagship 76-120). Score = the sum of the ten yachts’ Tide weights. The relay’s own grade on /islands always wins for a forged island; these only name a grade for a set nobody has forged yet (CLI pedigree).",
     "visitors": "never limited",
-    "headStartEndsAt": "2026-09-15T12:00:00Z",
-    "_source": "Live phase at RELAY /forge. Never trust these dates over the relay."
+    "_source": "Live phase at RELAY /forge. Never trust these dates over the relay.",
+    "wake": "Score x 100 AP, paid once, stays with the token (RELAY /activation). An island earns score x 10 AP a day from the block it was forged, asleep or awake."
   },
   "voice": {
     "allow": [
@@ -189,13 +208,13 @@
     "read": [
       "/stats",
       "/tide",
+      "/tide/daily",
       "/tide/round/{id}",
       "/forge",
+      "/islands",
+      "/activation/{id}",
       "/chandlery",
       "/regatta",
-      "/berths",
-      "/logbook",
-      "/logbook/yacht/{id}",
       "/health"
     ],
     "neverRead": [

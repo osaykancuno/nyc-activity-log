@@ -4,7 +4,7 @@ import { log } from './logger';
 import { initStore } from './store';
 import { initFonts, renderYachtCard } from './render/card';
 import { getStats } from './api/nyc';
-import { fleetCount, headBlock, totalMinted, publicClient } from './chain/client';
+import { claimOpen, fleetCount, headBlock, totalMinted, publicClient } from './chain/client';
 import { classify, type ChainEvent } from './chain/classify';
 import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
@@ -40,7 +40,7 @@ const HELP = `
     npm run cli -- preview lookup 1709         render + print a lookup reply
     npm run cli -- preview watch               build the watch post from live numbers
     npm run cli -- preview journal             write Yoko's entry for today, now
-    npm run cli -- preview daily               render yesterday's free daily draw
+    npm run cli -- preview daily [1000000]     render yesterday's free daily draw (or as if it marked that id)
     npm run cli -- soul                        who is keeping this log, and on what numbers
     npm run cli -- tx 0xabc...                 replay a real transaction through the pipeline
     npm run cli -- backfill 25890000 25890500  replay a block range
@@ -57,6 +57,10 @@ async function verify(): Promise<void> {
   console.log(`  rpc           ok   head block ${fmtInt(Number(block))}`);
   console.log(`  contract      ok   totalMinted() = ${fmtInt(Number(minted))} (${fmtInt(stats.yachts - Number(minted))} awaiting claim)`);
   console.log(`  fleet         ok   ${fmtInt(count.islands)} island(s) forged, ${fmtInt(count.burned)} yachts burned, ${fmtInt(count.afloat)} afloat`);
+  // The claim closes for good on 2 Nov 2026 12:00 UTC. From that read on, the
+  // watch and the journal stop printing "awaiting claim".
+  const open = await claimOpen();
+  console.log(`  claim         ${open == null ? '-- ' : 'ok '}  mintOpen() = ${open ?? 'unreadable'}${open === false ? ' - closed for good, the watch prints islands instead of a claim queue' : ' - closes for good 2026-11-02 12:00 UTC'}`);
 
   const y = await resolveYacht(1709);
   console.log(`  metadata      ok   #${y.id} ${grade(y)}, facts from the ${y.source === 'chain' ? 'contract' : 'club API'}`);
@@ -66,7 +70,14 @@ async function verify(): Promise<void> {
   if (health) {
     console.log(`  club relay    ok   ${health}`);
     const [tide, forge, rstats, chandlery] = await Promise.all([getTide(), getForge(), getRelayStats(), getChandlery()]);
-    if (tide?.round) {
+    const unfloated = tide?.round && tide.round.closed && !tide.round.winners?.length && !tide.round.winner
+      && (tide.round.captains ?? 0) < tide.round.floor;
+    if (unfloated) {
+      // A round that closed short of its floor is never drawn, and the relay
+      // opens the next one in its own time. Nothing to post until it does.
+      const r = tide.round!;
+      console.log(`  tide          ok   round ${r.id} closed ${new Date(r.closesAt).toISOString().slice(0, 10)} with ${r.captains ?? 0} of ${r.floor} captains - not drawn. No round open; ${tide.potCount ?? 0} prize(s) in the pot`);
+    } else if (tide?.round) {
       const r = tide.round;
       const prizes = (r.maxWinners ?? 1) > 1 && r.winnerAt?.length ? `, ${r.maxWinners} prizes at ${r.winnerAt[0]} captains` : '';
       console.log(`  tide          ok   round ${r.id} for ${r.prize}, ${r.captains ?? 0} captains / ${r.fleet?.length ?? 0} hulls in${prizes}, closes ${new Date(r.closesAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`);
@@ -168,7 +179,7 @@ async function preview(args: string[]): Promise<void> {
     case 'tide':
       return previewTide();
     case 'daily':
-      return previewDailyTide();
+      return previewDailyTide(arg ? Number(arg) : undefined);
 
     case 'forge-phase':
       return runForgeWatch();

@@ -156,6 +156,8 @@ export interface IslandRecord {
   /** Anchor Points the island earns a day. Published by the club from ~15 Sep 2026. */
   anchorPointsPerDay?: number | null;
   awake: boolean | null;
+  /** Chosen by its holder once it is awake: 24 characters, no links. Null until then. */
+  name?: string | null;
 }
 
 /** What waking one island costs: its grade score x 100 AP, paid once. */

@@ -3,7 +3,7 @@ import { log } from '../logger';
 import { getStats } from '../api/nyc';
 import { getRegatta, getRelayStats } from '../api/relay';
 import { erc721EnumerableAbi } from '../chain/abi';
-import { fleetCount, headBlock, publicClient } from '../chain/client';
+import { claimOpen, fleetCount, headBlock, publicClient } from '../chain/client';
 import { enqueue } from '../poster';
 import { renderWatchCard } from '../render/card';
 import { watchPost } from '../templates';
@@ -20,8 +20,10 @@ const l = log('watch');
  * Nothing else. A number we cannot point at is a number we do not publish.
  */
 export async function runWatch(force = false): Promise<void> {
-  const [count, block] = await Promise.all([fleetCount(), headBlock()]);
+  const [count, block, open] = await Promise.all([fleetCount(), headBlock(), claimOpen()]);
   const { afloat, claimed, burned, islands } = count;
+  // From 2 Nov 2026 12:00 UTC nothing awaits a claim: what was not claimed is never built.
+  const claimClosed = open === false;
 
   let fleet: number;
   let burnedFromChain = false;
@@ -89,8 +91,10 @@ export async function runWatch(force = false): Promise<void> {
     l.debug('regatta unavailable', e);
   }
 
+  // The club API's class counts describe the claim set, yachts never built
+  // included: true while the claim is open, not once it has closed.
   let chips: [string, string][] | undefined;
-  try {
+  if (!claimClosed) try {
     const st = await getStats();
     chips = Object.entries(st.classes)
       .sort((a, b) => b[1] - a[1])
@@ -108,23 +112,32 @@ export async function runWatch(force = false): Promise<void> {
     ? `${fmtInt(Number(blocksSince))} blocks since the last watch \u00b7 ${source} at ${fmtInt(Number(block))}`
     : `${source} at block ${fmtInt(Number(block))} \u00b7 verify it yourself`;
 
-  const media = renderWatchCard(
-    [
-      ['Afloat', fmtInt(afloat)],
-      [burnedFromChain ? 'Born from burns' : 'Fleet on record', fmtInt(fleet)],
-      ['Awaiting claim', fmtInt(unclaimed)],
-      ...(relay?.members ? ([['Captains', fmtInt(relay.members)]] as [string, string][]) : []),
-    ],
-    `${watchName(at)} watch`,
-    logDate(at),
-    note,
-    { bar: { label: 'Claimed', value: claimed, total: fleet }, chips, subtitle: season ?? undefined },
-  );
+  const captains = relay?.members ? ([['Captains', fmtInt(relay.members)]] as [string, string][]) : [];
+  const media = claimClosed
+    ? renderWatchCard(
+      [['Afloat', fmtInt(afloat)], ['Islands', fmtInt(islands)], ['Yachts burned', fmtInt(burned)], ...captains],
+      `${watchName(at)} watch`,
+      logDate(at),
+      note,
+      { subtitle: season ?? undefined },
+    )
+    : renderWatchCard(
+      [
+        ['Afloat', fmtInt(afloat)],
+        [burnedFromChain ? 'Born from burns' : 'Fleet on record', fmtInt(fleet)],
+        ['Awaiting claim', fmtInt(unclaimed)],
+        ...captains,
+      ],
+      `${watchName(at)} watch`,
+      logDate(at),
+      note,
+      { bar: { label: 'Claimed', value: claimed, total: fleet }, chips, subtitle: season ?? undefined },
+    );
 
   enqueue({
     key: force ? `watch:forced:${Date.now()}` : `watch:${at.toISOString().slice(0, 13)}`,
     kind: 'watch',
-    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season, blocksSince, burned }, at),
+    text: watchPost({ afloat, fleet, unclaimed, deltaAfloat, burnedFromChain, block, regatta: season, blocksSince, burned, claimClosed, islands }, at),
     media,
     priority: 50,
   });

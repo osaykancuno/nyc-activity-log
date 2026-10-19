@@ -116,6 +116,14 @@ export interface WatchNumbers {
   blocksSince?: bigint | null;
   /** Yachts burned in forges, already taken out of `afloat`. */
   burned?: number;
+  /**
+   * The claim has closed for good (mintOpen() false). A yacht not claimed by
+   * then is never built, so nothing is "awaiting claim" any more: the watch
+   * stops printing that queue and counts the islands instead.
+   */
+  claimClosed?: boolean;
+  /** Islands forged. Printed once the claim is closed. */
+  islands?: number;
 }
 
 /**
@@ -148,8 +156,9 @@ function movingWatch(n: WatchNumbers, at: Date): string {
       logEntryLine(at),
       '',
       `Afloat: ${fmtInt(n.afloat)}${delta}`,
-      `${fleetLabel}: ${fmtInt(n.fleet)}`,
-      `Awaiting claim: ${fmtInt(n.unclaimed)}`,
+      ...(n.claimClosed
+        ? [`Islands: ${fmtInt(n.islands ?? 0)} · the claim is closed`]
+        : [`${fleetLabel}: ${fmtInt(n.fleet)}`, `Awaiting claim: ${fmtInt(n.unclaimed)}`]),
       ...(season && n.regatta ? [n.regatta] : []),
       '',
       `${source} ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
@@ -174,7 +183,9 @@ function stillWatch(n: WatchNumbers, at: Date): string {
       logEntryLine(at),
       '',
       `No Yacht moved in ${fmtBlock(n.blocksSince!)} blocks.`,
-      `Afloat ${fmtInt(n.afloat)} \u00b7 awaiting claim ${fmtInt(n.unclaimed)}`,
+      n.claimClosed
+        ? `Afloat ${fmtInt(n.afloat)} \u00b7 islands ${fmtInt(n.islands ?? 0)}`
+        : `Afloat ${fmtInt(n.afloat)} \u00b7 awaiting claim ${fmtInt(n.unclaimed)}`,
       ...(season && n.regatta ? [n.regatta] : []),
       '',
       `Read at block ${fmtBlock(n.block)}.${invite ? ' Check it yourself.' : ''}`,
@@ -244,9 +255,12 @@ export function pedigreePost(p: PedigreeResult): string {
   if (!p.complete) {
     lines.push('', `A forge takes ${club.islands.hullsPerIsland} Yachts. This set is ${p.yachts.length}.`);
   }
-  if (!club.islands.gradeThresholds) {
-    lines.push('', 'The club has not published grade bands, so this log names none.');
-  }
+  // The bands are the club's own, from /activation. Only a full set of ten has
+  // a score, and a forged island's grade always comes from the relay instead.
+  const bands = Object.entries(club.islands.gradeThresholds ?? {}).sort((x, y) => y[1] - x[1]);
+  const named = p.complete ? bands.find(([, min]) => p.weight >= min)?.[0] : undefined;
+  if (named) lines.push(`Forged, it would be ${/^[AEIOU]/.test(named) ? 'an' : 'a'} ${named} (score ${p.weight}).`);
+  else if (!bands.length) lines.push('', 'The club has not published grade bands, so this log names none.');
   lines.push('\u2693');
   return truncateTweet(lines.join('\n'));
 }
@@ -262,6 +276,8 @@ export interface IslandFacts {
   /** Anchor Points to wake it, once - or what was paid, if it is awake already. */
   wakeAp: number | null;
   awake: boolean;
+  /** Its holder's name for it, once awake. The forge post never prints it: a new island has none. */
+  name?: string | null;
 }
 
 /**
@@ -317,7 +333,7 @@ export function forgePost(
  */
 export const suggestedBio =
   `Official ship's log of ${club.club.name}, kept by ${yoko.agent.name} — Normie #${yoko.agent.tokenId}. ` +
-  `Claims, sales, watches. Every number verifiable on-chain. CC0.`;
+  `Claims, sales, forges, the Tide, watches. Every number verifiable on-chain. CC0.`;
 
 export const shortAddress = shortAddr;
 
@@ -418,6 +434,9 @@ export function tideOpenPost(t: TideOpen): string {
 
 export interface TideWinnerLine {
   id: number;
+  /** "Yacht", or "Island" for a token forged from ten of them. */
+  noun: 'Yacht' | 'Island';
+  /** A yacht's grade, or an island's grade and score. */
   yachtClass: string;
   weight: number;
   /**
@@ -442,10 +461,10 @@ export function tideSettledPost(t: TideSettled): string {
 
   const headline = many
     ? `${fmtInt(t.winners.length)} prizes, each ${prizeName(t.prize)}.`
-    : `Yacht #${first.id} takes ${prizeName(t.prize)}.`;
+    : `${first.noun} #${first.id} takes ${prizeName(t.prize)}.`;
 
   const drawn = many
-    ? t.winners.map((w) => `Yacht #${w.id} \u00b7 ${w.yachtClass} \u00b7 weight ${w.weight} of ${w.pool}`)
+    ? t.winners.map((w) => `${w.noun} #${w.id} \u00b7 ${w.yachtClass} \u00b7 weight ${w.weight} of ${w.pool}`)
     : [`${first.yachtClass} \u00b7 weight ${first.weight} of ${first.pool}`];
 
   // Captains are what the club counts. Hulls are only what they carried in.
@@ -475,6 +494,13 @@ export function tideSettledPost(t: TideSettled): string {
 
 export interface DailyMark {
   id: number;
+  /**
+   * "Yacht", or "Island": the draw marks any token a captain enters, and on
+   * 17 Oct 2026 it marked island #1000000 - which the log published as a
+   * Cruiser yacht, because it read every id as a hull.
+   */
+  noun: 'Yacht' | 'Island';
+  /** A yacht's grade, or an island's name, grade and score. */
   hullGrade: string;
   rank: number | null;
   entries: number;
@@ -496,7 +522,7 @@ export function dailyMarkPost(m: DailyMark): string {
   const build = (withRegister: boolean, withHash: boolean): string =>
     [
       `The Tide \u00b7 the daily draw.`,
-      `Yacht #${m.id} is marked.`,
+      `${m.noun} #${m.id} is marked.`,
       '',
       hull,
       `${fmtInt(m.entries)} entered. Free, one a captain.`,

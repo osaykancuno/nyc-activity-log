@@ -70,6 +70,22 @@ export async function fleetCount(): Promise<FleetCount> {
   return { claimed, islands, burned, afloat: claimed - burned };
 }
 
+/**
+ * Is the claim still open? The contract's own `mintOpen()`. It closes for good
+ * on 2 Nov 2026 12:00 UTC: from then on a yacht not yet claimed is never built,
+ * so "awaiting claim" stops being a figure and becomes a falsehood. Null when
+ * the RPC cannot say - the callers then keep describing an open claim, which is
+ * what it was the last time anybody could check.
+ */
+export async function claimOpen(): Promise<boolean | null> {
+  try {
+    return await publicClient.readContract({ address: NYC, abi: nycAbi, functionName: 'mintOpen' });
+  } catch (e) {
+    l.warn('mintOpen() unreadable - treating the claim as open', e);
+    return null;
+  }
+}
+
 export const isClaimed = (id: number | bigint) =>
   publicClient.readContract({ address: NYC, abi: nycAbi, functionName: 'claimed', args: [BigInt(id)] });
 

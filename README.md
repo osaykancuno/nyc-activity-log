@@ -16,10 +16,10 @@ The club's own bot. It reads the chain and the club's public CC0 API and writes 
 | **B · Sale** | `Transfer` with a proven payment | id, class, rank, price, seller → buyer (ENS or shortened) + card |
 | **C · Sweep** | 2 or more hulls to the same captain in one tx | one post, never N. A single hull is its own sale entry, with its own seller and price |
 | **D · Lookup** | a mention containing `#1709` | one reply: traits and art, never an owner |
-| **E · Watch** | 09:00 and 19:00 Europe/Rome, every day | afloat / fleet / awaiting claim / captains, the running Regatta season, and the block it was all read at. A day when nothing changed hands is written as a different post: it leads with how far the chain travelled while the fleet stood still |
+| **E · Watch** | 09:00 and 19:00 Europe/Rome, every day | afloat / fleet / awaiting claim / captains, the running Regatta season, and the block it was all read at. Once the claim closes for good (2 Nov 2026 12:00 UTC, `mintOpen()` false) nothing is awaiting a claim any more — a yacht not claimed is never built — so the watch prints afloat and islands instead. A day when nothing changed hands is written as a different post: it leads with how far the chain travelled while the fleet stood still |
 | **F · Pedigree** | CLI | class weights of a forge set |
-| **G · Tide** | the club relay | a round opens: prize, cost, cap, the captains needed to float it, close. It settles: every winning hull — a round hands out two prizes once 30 captains enter — each against the pool it was drawn from, the settle block and the draw hash |
-| **G · Tide, daily** | the club relay | the free draw, once a day: the hull a block nobody could foresee marked, how many captains entered, the block and the hash. A day that marked nobody is not posted — roughly two in five end that way |
+| **G · Tide** | the club relay | a round opens: prize, cost, cap, the captains needed to float it, close. It settles: every winner — yacht or island — a round hands out two prizes once 30 captains enter — each against the pool it was drawn from, the settle block and the draw hash |
+| **G · Tide, daily** | the club relay | the free draw, once a day: the token a block nobody could foresee marked — a yacht, or an island, which is named as one with its grade and score — how many captains entered, the block and the hash. A day that marked nobody is not posted — roughly two in five end that way |
 | **I · Forge** | relay phase + 10 hulls burned in one tx | arms itself when the club opens forging — no date to remember |
 | **J · Captain's log** | 21:00 Europe/Rome, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
 
@@ -46,7 +46,7 @@ npm run tools:soul    # every line, every bank, against the length and voice gua
 
 **The chain** for anything about ownership and money: `Transfer`, `totalMinted()`, transaction receipts, and `tokenURI` for the official art.
 
-**The club's own relay** (`https://nyc-realtime.fly.dev`, the service the 3D marina reads) for the off-chain half of the club: `/tide` — rounds, entries by hull, settle block, draw hash; `/forge` — the live phase, which is why nobody has to type the opening date into a config file; `/stats` — captains, and a cross-check against `totalMinted()`; `/chandlery` — the live price list, so a post never quotes a stale one. Its wallet-keyed routes are listed in `data/club.json` under `relay.neverRead` and the client refuses to be pointed at them.
+**The club's own relay** (`https://nyc-realtime.fly.dev`, the service the 3D marina reads) for the off-chain half of the club: `/tide` — rounds, entries by hull, settle block, draw hash; `/forge` — the live phase, which is why nobody has to type the opening date into a config file; `/islands` and `/activation` — each island's grade, score, Anchor Points a day and wake cost; `/stats` — captains, and a cross-check against `totalMinted()`; `/chandlery` — the live price list, so a post never quotes a stale one. Its wallet-keyed routes are listed in `data/club.json` under `relay.neverRead` and the client refuses to be pointed at them.
 
 ## How a sale is proven
 

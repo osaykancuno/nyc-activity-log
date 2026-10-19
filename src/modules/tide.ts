@@ -3,13 +3,56 @@ import { log } from '../logger';
 import { getDailyTide, getTide, type DailyDraw, type TideRound, type TideWinner } from '../api/relay';
 import type { Yacht } from '../api/nyc';
 import { enqueue } from '../poster';
-import { renderFleetCard, renderWatchCard, renderYachtCard } from '../render/card';
+import { renderFleetCard, renderIslandCard, renderWatchCard, renderYachtCard } from '../render/card';
 import { dailyMarkPost, tideOpenPost, tideSettledPost, type TideCost, type TideWinnerLine } from '../templates';
-import { classBreakdown, fmtInt, grade } from '../util';
-import { resolveYacht } from '../yacht';
+import { classBreakdown, fmtInt, grade, isIsland } from '../util';
+import { resolveIsland, resolveYacht, type Island } from '../yacht';
 import { alreadyPosted, markPosted } from '../store';
+import { islandFacts } from './forge';
 
 const l = log('tide');
+
+/**
+ * What a draw landed on. Both clocks take islands as well as yachts - they are
+ * tokens of the same contract - and on 17 Oct 2026 the daily draw marked island
+ * #1000000. The log read it as a yacht: the club API has no island, so the
+ * contract fallback called it a Cruiser born from Normie #0, and the post said
+ * "Yacht #1000000". An id at or above the island base is an island, always.
+ */
+interface Drawn {
+  id: number;
+  noun: 'Yacht' | 'Island';
+  /** The line under the headline: a yacht's grade, or an island's name, grade and score. */
+  label: string;
+  /** Grade and score alone, short enough for a card subtitle. */
+  short: string;
+  yacht: Yacht | null;
+  island: Island | null;
+}
+
+async function readDrawn(id: number): Promise<Drawn> {
+  if (!isIsland(id)) {
+    let yacht: Yacht | null = null;
+    try {
+      yacht = await resolveYacht(id);
+    } catch (e) {
+      l.warn(`could not read the class of #${id}`, e);
+    }
+    const g = yacht ? grade(yacht) : 'Yacht';
+    return { id, noun: 'Yacht', label: g, short: g, yacht, island: null };
+  }
+
+  // One ask, not the forge's four: an island marked by the Tide was graded long ago.
+  const [island, facts] = await Promise.all([
+    resolveIsland(id).catch((e) => { l.warn(`island #${id}: tokenURI unreadable`, e); return null; }),
+    islandFacts(id, 1).catch(() => null),
+  ]);
+  const short = facts?.grade
+    ? [facts.grade, facts.score != null ? `score ${facts.score}` : ''].filter(Boolean).join(' · ')
+    : 'Island';
+  const label = facts?.name ? `${facts.name} · ${short}` : short;
+  return { id, noun: 'Island', label, short, yacht: null, island };
+}
 
 /**
  * Module G. Two moments in a round, and nothing in between:
@@ -131,21 +174,17 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
   // shrinks between prizes: a winning captain leaves with every yacht entered.
   const fleetWeight = (r.fleet ?? []).reduce((s, f) => s + f.weight, 0);
 
-  // One read per winning hull, shared by the card and the text.
-  const drawn = await Promise.all(won.map(async (w) => {
-    const id = Number(w.yachtId);
-    let yacht: Yacht | null = null;
-    try {
-      yacht = await resolveYacht(id);
-    } catch (e) {
-      l.warn(`could not read the class of #${id}`, e);
-    }
-    return { id, weight: w.weight, pool: w.poolWeight ?? fleetWeight, yacht };
-  }));
+  // One read per winner, shared by the card and the text. A winner may be an island.
+  const drawn = await Promise.all(won.map(async (w) => ({
+    ...(await readDrawn(Number(w.yachtId))),
+    weight: w.weight,
+    pool: w.poolWeight ?? fleetWeight,
+  })));
 
   const lines: TideWinnerLine[] = drawn.map((d) => ({
     id: d.id,
-    yachtClass: d.yacht ? grade(d.yacht) : 'Yacht',
+    noun: d.noun,
+    yachtClass: d.label,
     weight: d.weight,
     pool: d.pool,
   }));
@@ -154,7 +193,16 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
   const hulls = drawn.map((d) => d.yacht).filter((y): y is Yacht => y !== null);
 
   let media: Buffer;
-  if (drawn.length === 1 && hulls.length === 1) {
+  if (drawn.length === 1 && drawn[0]!.island) {
+    // An island won: its own picture, never a yacht's.
+    const only = drawn[0]!;
+    media = renderIslandCard(only.island!, [], 'the tide', {
+      title: `Round ${r.id} settled`,
+      subtitle: `Island #${only.id} · ${only.short} · weight ${only.weight} of ${only.pool}`,
+      note,
+      right: 'winner',
+    });
+  } else if (drawn.length === 1 && hulls.length === 1) {
     // One prize: the winner gets its own portrait. A round is won by a hull.
     const only = drawn[0]!;
     media = renderYachtCard(hulls[0]!, 'the tide', {
@@ -176,7 +224,7 @@ async function onSettled(r: TideRound, force = false): Promise<void> {
     // The club API could not place every winner: numbers only, rather than a
     // portrait of whichever hull happened to resolve.
     media = renderWatchCard(
-      drawn.map((d): [string, string] => [`Winner #${d.id}`, `weight ${d.weight} of ${d.pool}`]),
+      drawn.map((d): [string, string] => [`${d.noun} #${d.id}`, `weight ${d.weight} of ${d.pool}`]),
       'the tide',
       `Round ${r.id} settled`,
       note,
@@ -234,15 +282,18 @@ async function postDailyMark(last: DailyDraw, marks: number, force = false): Pro
   if (!last.yachtId || last.block == null) return;
   const id = Number(last.yachtId);
   const block = last.block;
-  let y: Yacht | null = null;
-  try {
-    y = await resolveYacht(id);
-  } catch (e) {
-    l.warn(`could not read the marked hull #${id}`, e);
-  }
+  const d = await readDrawn(id);
+  const y = d.yacht;
 
   const note = `${fmtInt(last.entries)} entered · block ${fmtInt(block)} · ${last.day}`;
-  const media = y
+  const media = d.island
+    ? renderIslandCard(d.island, [], 'the daily tide', {
+      title: `Island #${id}`,
+      subtitle: d.short,
+      note,
+      right: 'marked',
+    })
+    : y
     ? renderYachtCard(y, 'the daily tide', {
       title: `Yacht #${id}`,
       subtitle: `${grade(y)}${y.rarityRank != null ? ` · rank ${y.rarityRank}` : ''}`,
@@ -261,7 +312,8 @@ async function postDailyMark(last: DailyDraw, marks: number, force = false): Pro
     kind: 'tide-daily',
     text: dailyMarkPost({
       id,
-      hullGrade: y ? grade(y) : 'Yacht',
+      noun: d.noun,
+      hullGrade: d.label,
       rank: y?.rarityRank ?? null,
       entries: last.entries,
       block,
@@ -273,12 +325,20 @@ async function postDailyMark(last: DailyDraw, marks: number, force = false): Pro
   });
 }
 
-/** CLI only: render yesterday's daily draw, if it marked a hull. */
-export async function previewDailyTide(): Promise<void> {
+/**
+ * CLI only: render yesterday's daily draw, if it marked a hull. With an id, the
+ * last draw is rendered as if it had marked that token - `preview daily 1000000`
+ * is how an island's mark is checked without waiting for one.
+ */
+export async function previewDailyTide(asId?: number): Promise<void> {
   const daily = await getDailyTide();
   const t = daily?.tide;
   if (!t) return l.error('the relay did not answer');
   l.info(`daily draw: ${fmtInt(t.entries)} entered today, ${fmtInt(t.marks)} marks in the register`);
+  if (asId != null && t.last?.block != null) {
+    l.info(`rendering the draw of ${t.last.day} as if it had marked #${asId}`);
+    return postDailyMark({ ...t.last, yachtId: String(asId) }, t.marks, true);
+  }
   if (!t.last?.yachtId) {
     return l.info(`the last draw (${t.last?.day ?? '?'}) marked no yacht - nothing to render, and nothing this log would post`);
   }

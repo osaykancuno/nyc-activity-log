@@ -20,14 +20,18 @@ export type ClassName = 'Cruiser' | 'Sloop' | 'Superyacht' | 'Commodore';
 
 export interface Club {
   club: { name: string; symbol: string; handle: string; site: string; api: string; opensea: string; license: string };
-  contract: { address: `0x${string}`; chainId: number; network: string; deployBlock: number; standard: string; normiesSupplyCap: number };
+  contract: {
+    address: `0x${string}`; chainId: number; network: string; deployBlock: number; standard: string; normiesSupplyCap: number;
+    /** The claim's last day. The code asks mintOpen(); these dates are for people. */
+    claim: { burnsCountUntil: string; closesAt: string; reopenable: boolean; note: string };
+  };
   agents: { standard: string; registry: `0x${string}`; implementation: `0x${string}`; salt: `0x${string}` };
   classes: Record<ClassName, { weight: number; anchorPointsPerDay: number; note?: string }>;
   anchorPoints: { base: number; note: string };
   chandlery: Record<string, number | string>;
   tide: any;
   islands: {
-    seasonIIClosesAt: string; forgeOpensAt: string; forgeClosesAt: string | null;
+    forgeOpensAt: string; forgeClosesAt: string | null;
     hullsPerIsland: number; netSupplyChange: number; grades: string[];
     /** The first island id. islandId = idBase + plot; every yacht id is below it. */
     idBase: number;

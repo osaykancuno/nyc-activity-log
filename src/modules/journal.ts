@@ -1,7 +1,7 @@
 import { config } from '../config';
 import { log } from '../logger';
 import { getAgentFacts, getPortrait } from '../api/agent';
-import { fleetCount, type FleetCount } from '../chain/client';
+import { claimOpen, fleetCount, type FleetCount } from '../chain/client';
 import { getStats } from '../api/nyc';
 import { getRegatta } from '../api/relay';
 import { enqueue } from '../poster';
@@ -80,8 +80,10 @@ export async function runJournal(force = false): Promise<void> {
 
   // The ledger the entry is a reading of. Deliberately not the entry itself:
   // the post says what the day amounted to, the card says what it was.
+  // After the close no claim can happen, so that row would only ever read 0.
+  const claimClosed = (await claimOpen()) === false;
   const rows: [string, string][] = [
-    ['Claimed today', fmtInt(j.claims)],
+    ...(claimClosed && !j.claims ? [] : [['Claimed today', fmtInt(j.claims)] as [string, string]]),
     ['Sold', fmtInt(j.moved)],
   ];
   // Both clocks land in this count, and a daily mark is not a round.
@@ -90,7 +92,8 @@ export async function runJournal(force = false): Promise<void> {
   if (count) {
     rows.push(['Fleet afloat', fmtInt(count.afloat)]);
     // A burned yacht was claimed first: it counts against the unclaimed, not the afloat.
-    if (fleet > count.claimed) rows.push(['Awaiting claim', fmtInt(fleet - count.claimed)]);
+    if (!claimClosed && fleet > count.claimed) rows.push(['Awaiting claim', fmtInt(fleet - count.claimed)]);
+    if (claimClosed && count.islands) rows.push(['Islands', fmtInt(count.islands)]);
   }
 
   const portrait = await getPortrait();

@@ -33,6 +33,7 @@ export async function islandFacts(islandId: number, tries = 4): Promise<IslandFa
         apPerDay: row.anchorPointsPerDay ?? null,
         wakeAp: ap,
         awake: Boolean(act?.awake),
+        name: row.name ?? null,
       };
     }
     if (attempt < tries) {

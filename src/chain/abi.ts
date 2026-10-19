@@ -4,6 +4,8 @@ export const nycAbi = [
   { type: 'function', name: 'balanceOf', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }] },
   { type: 'function', name: 'claimed', stateMutability: 'view', inputs: [{ name: 'yachtId', type: 'uint256' }], outputs: [{ type: 'bool' }] },
   { type: 'function', name: 'totalMinted', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  /** True until the claim closes for good (2 Nov 2026 12:00 UTC); FinalKeeper cannot reopen it. */
+  { type: 'function', name: 'mintOpen', stateMutability: 'view', inputs: [], outputs: [{ type: 'bool' }] },
   { type: 'function', name: 'tokenURI', stateMutability: 'view', inputs: [{ name: 'tokenId', type: 'uint256' }], outputs: [{ type: 'string' }] },
   {
     type: 'event', name: 'Transfer',
