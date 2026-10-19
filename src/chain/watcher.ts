@@ -2,7 +2,7 @@ import type { Log } from 'viem';
 import { config } from '../config';
 import { log } from '../logger';
 import { getState, setLastBlock } from '../store';
-import { nycAbi } from './abi';
+import { transferEvent } from './abi';
 import { NYC, headBlock, publicClient } from './client';
 
 const l = log('watcher');
@@ -56,7 +56,7 @@ export async function poll(cursor: bigint): Promise<{ groups: TxGroup[]; next: b
     try {
       const logs = await publicClient.getLogs({
         address: NYC,
-        event: nycAbi[5] as any, // Transfer
+        event: transferEvent,
         fromBlock: from,
         toBlock: to,
       });

@@ -17,6 +17,13 @@ export const nycAbi = [
   },
 ] as const;
 
+/**
+ * The Transfer event, found by name. The watcher used to take it as nycAbi[5];
+ * adding mintOpen() above it on 19 Oct 2026 moved it to [6], and every poll
+ * failed with "Event not found on ABI" until this replaced the index.
+ */
+export const transferEvent = nycAbi.find((x) => x.type === 'event' && x.name === 'Transfer')!;
+
 export const erc721EnumerableAbi = [
   { type: 'function', name: 'totalSupply', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
 ] as const;
