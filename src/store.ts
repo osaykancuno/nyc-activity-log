@@ -38,8 +38,6 @@ export interface Journal {
   day: string | null;
   claims: number;
   moved: number;
-  /** Both clocks of the Tide: rounds settled and daily marks alike. */
-  tides: number;
   forges: number;
   lastEntryDay: string | null;
   recent: string[];
@@ -48,7 +46,7 @@ export interface Journal {
 const RECENT_KEPT = 8;
 
 const emptyJournal = (day: string | null): Journal => ({
-  day, claims: 0, moved: 0, tides: 0, forges: 0, lastEntryDay: null, recent: [],
+  day, claims: 0, moved: 0, forges: 0, lastEntryDay: null, recent: [],
 });
 
 let DIR = config.paths.state;
@@ -139,12 +137,11 @@ export function initStore(): void {
   }
 
   // A stale ledger is worse than an empty one: it has the old keys but not the
-  // posts made since, so the Tide would announce a round already announced and
-  // the watcher would replay days of blocks. Treat it as a first look instead -
-  // every module seeds silently - and keep only what cannot repeat a post.
+  // posts made since, so the watcher would replay days of blocks. Treat it as
+  // a first look instead - every module seeds silently - and keep only what
+  // cannot repeat a post.
   if (rows && newest && Date.now() - newest > STALE_MS) {
-    l.warn(`ledger is stale (newest line ${new Date(newest).toISOString()}) - starting from the chain head and re-seeding the Tide, so nothing is posted twice`);
-    for (const k of ['tide:seeded', 'tide:daily:seeded']) seen.delete(k);
+    l.warn(`ledger is stale (newest line ${new Date(newest).toISOString()}) - starting from the chain head, so nothing is posted twice`);
     state.lastBlock = null;
     state.lastWatch = null;
     persistState();
@@ -213,7 +210,6 @@ export function noteActivity(kind: string): void {
   const j = state.journal;
   if (kind === 'claim') j.claims += 1;
   else if (kind === 'sale' || kind === 'sweep') j.moved += 1;
-  else if (kind.startsWith('tide')) j.tides += 1;
   else if (kind.startsWith('forge')) j.forges += 1;
   else return; // watch, lookup and Yoko's own entry are not part of the day's shape
   persistState();

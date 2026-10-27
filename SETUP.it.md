@@ -87,13 +87,13 @@ acquistati in anticipo. I prezzi che contano per questo bot:
 | Un post **con un link dentro** | **$0,200** — tredici volte tanto |
 | Leggere le proprie menzioni | $0,001 a menzione, zero quando non ce ne sono |
 
-Due watch al giorno sono $0,90 al mese. Con claim, vendite, sweep e Tide di una flotta
+Due watch al giorno sono $0,90 al mese. Con claim, vendite, sweep e forge di una flotta
 tranquilla, l'account costa **circa $2 al mese**.
 
 Il bot **si rifiuta di pubblicare un post che contenga un link**: non gli servono (stampa
 numeri di blocco, non URL) e costerebbero tredici volte tanto. Ha anche un tetto di spesa
 suo, `MONTHLY_BUDGET_USD`, oltre al quale smette da solo tenendo gli ultimi crediti per
-claim, sweep e Tide chiusi.
+claim, sweep e forge.
 
 Il modulo D (lookup su menzione) ora è economico — le menzioni del proprio account costano
 $0,001 l'una — quindi si può accendere quando vuoi.
@@ -160,7 +160,7 @@ Come funziona, in breve:
 
 - **Nessun modello di linguaggio nel giro.** Le frasi che Yoko può dire sono tutte scritte in
   [`data/yoko.json`](data/yoko.json), nel repo. I numeri della giornata scelgono da quale gruppo
-  pescare — giornata muta, claim, mercato, Tide, giornata piena — e lo stato ricorda le ultime
+  pescare — giornata muta, claim, mercato, giornata piena — e lo stato ricorda le ultime
   otto frasi usate, così non apre due pagine di fila allo stesso modo.
   Costo: **un post, 0,015 $**. Circa **0,45 $ al mese**. Nient'altro.
 - **La persona invece è viva.** Livello, action points, passaggi e differenza di pixel vengono
@@ -188,8 +188,8 @@ il modulo è acceso di default.
 ## Il relay del club
 
 Il bot legge anche `https://nyc-realtime.fly.dev`, il servizio pubblico che alimenta la marina 3D.
-Da lì arrivano il round della Tide (con blocco di settle e hash del sorteggio), la fase del forge
-e il conteggio dei captain. Non serve nessuna chiave.
+Da lì arrivano la stagione della Regatta, la fase del forge, il registro delle isole
+e il conteggio dei captain. La Tide è stata ritirata dal club a ottobre 2026 e il bot non la legge più. Non serve nessuna chiave.
 
 Tre rotte di quel relay sono per wallet — `/regatta/leaderboard`, `/chandlery/{wallet}`,
 `/logbook/captain/{wallet}` — e il bot **si rifiuta di chiamarle**: c'è un controllo nel codice,

@@ -4,10 +4,10 @@ import { log } from '../logger';
 const l = log('relay');
 
 /**
- * The club's own relay - the off-chain half of the club (Tide, Chandlery,
- * Regatta, forge phase). It is the same public, CORS-open service the marina
- * itself reads, and it is the "public source" this log was waiting for before
- * switching the Tide module on.
+ * The club's own relay - the off-chain half of the club (Chandlery, Regatta,
+ * forge phase, islands). It is the same public, CORS-open service the marina
+ * itself reads. The Tide it used to serve was retired in October 2026; its
+ * routes stay readable as history and this log no longer reads them.
  *
  * PRIVACY. Three of its routes are keyed by wallet:
  *     /regatta/leaderboard   /chandlery/{wallet}   /logbook/captain/{wallet}
@@ -17,115 +17,6 @@ const l = log('relay');
  * Be kind to it: one small Fly machine serves the whole marina. Everything here
  * is cached, and nothing polls faster than the minutes set in config.
  */
-
-/**
- * One winner of a round. The relay publishes an array of these now, because a
- * round hands out two prizes instead of one once enough captains enter.
- */
-export interface TideWinner {
-  yachtId: string;
-  weight: number;
-  /** The number the draw landed on, out of poolWeight. Absent on older rounds. */
-  draw?: number | null;
-  /**
-   * The pool this hull was drawn from - and NOT the weight of the whole entered
-   * fleet. A captain who wins leaves the pool with every yacht they entered, so
-   * a second prize is drawn from a smaller pool than the first. Printing the
-   * fleet total against a second winner would state a draw that never happened.
-   */
-  poolWeight?: number | null;
-  granted?: boolean | null;
-}
-
-export interface TideRound {
-  id: number;
-  prize: string;
-  /** Set when the announced prize changed after the round was announced. */
-  prizeWas: string | null;
-  /**
-   * One flat price a yacht. Rounds up to 5 had it; from round 6 it is null and
-   * the price follows the yacht's grade instead - see costLadder. Printing it
-   * bare published "null Anchor Points a Yacht".
-   */
-  cost: number | null;
-  /** AP for one unit of weight in the draw, so a point buys the same chance in every grade. */
-  costPerWeight?: number | null;
-  /** What one yacht costs to enter, by grade, e.g. { Cruiser: 250, Commodore: 3000 }. */
-  costLadder?: Record<string, number> | null;
-  cap: number;
-  /** The minimum CAPTAINS for a round to be drawn at all. Never a hull count. */
-  floor: number;
-  watermark: number;
-  committed: number;
-  commits: number;
-  /** Captains entered. The club counts captains; yachts only carry weight. */
-  captains: number | null;
-  fleet: { yachtId: string; weight: number }[];
-  closesAt: number;
-  closed: boolean;
-  callable: boolean;
-  earlyCall: boolean | null;
-  calledBlock: number | null;
-  settleBlock: number | null;
-  hash: string | null;
-  /** The old single winner. Still sent for a one-prize round; `winners` is the truth. */
-  winner: { yachtId: string; weight: number } | null;
-  winners: TideWinner[] | null;
-  winnersGranted: number | null;
-  /** Captain counts that add a further prize, e.g. [30]. */
-  winnerAt: number[] | null;
-  /** What winnerAt counts - "wallets" today. */
-  winnerAtCounts: string | null;
-  /** The ceiling on prizes for this round. */
-  maxWinners: number | null;
-  settledAt: number | null;
-  prizeGranted: boolean | null;
-  next: string | null;
-}
-
-export interface Tide {
-  round: TideRound | null;
-  /**
-   * No NFT in the club's prize wallet means no round opens at all: the Tide
-   * waits rather than take points for a prize that does not exist.
-   */
-  dormant: boolean | null;
-  /** How many prizes are waiting in the pot. */
-  potCount: number | null;
-  history: TideRound[];
-}
-
-/**
- * One day of the free draw. Only the most recent one carries the block and the
- * hash it was drawn on, which is what makes a mark checkable.
- */
-export interface DailyDraw {
-  day: string;
-  entries: number;
-  /** Null when the draw marked nobody. It happens, and the relay says so plainly. */
-  yachtId: string | null;
-  block: number | null;
-  hash: string | null;
-  at: number | null;
-}
-
-export interface DailyTide {
-  tide: {
-    day: string;
-    entries: number;
-    entered: boolean;
-    closesAt: number;
-    minHoldBlocks: number;
-    settling: boolean;
-    settleBlock: number | null;
-    /** Yesterday's draw - the only one published with its block and hash. */
-    last: DailyDraw | null;
-    /** Marks in the register since it opened. A mark is permanent. */
-    marks: number;
-    /** Recent days, without the block or the hash. */
-    history: { day: string; yachtId: string | null; entries: number }[];
-  } | null;
-}
 
 export interface Forge {
   phase: 'announced' | 'open' | 'closed' | string;
@@ -193,6 +84,12 @@ export interface RegattaSeason {
     presenceMode: string | null;
     inMuster: boolean | null;
     inviteSeason: number | null;
+    /**
+     * What the Tide used to draw now goes here (from Oct 2026): one yacht from
+     * the club's prize wallet to each division title, only in a division with
+     * at least `minCaptains` captains on its final board.
+     */
+    prize?: { kind: string; minCaptains: number; to: string } | null;
   } | null;
 }
 
@@ -226,9 +123,6 @@ async function get<T>(path: string, ttlMs: number): Promise<T | null> {
   }
 }
 
-export const getTide = () => get<Tide>('/tide', 60_000);
-/** The free daily draw. It moves once a day, so it is read gently. */
-export const getDailyTide = () => get<DailyTide>('/tide/daily', 5 * 60_000);
 export const getForge = () => get<Forge>('/forge', 5 * 60_000);
 export const getRelayStats = () => get<RelayStats>('/stats', 60_000);
 export const getChandlery = () => get<ChandleryCatalog>('/chandlery', 6 * 60 * 60_000);

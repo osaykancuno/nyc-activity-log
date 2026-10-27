@@ -344,32 +344,14 @@ export function forgePost(
  * improvised - and it names the keeper, because the account does now too.
  * It says official because it is: the label on X names the club as the manager.
  * X allows 160 characters; `verify` prints the count so it is never guessed.
+ * No Tide (retired Oct 2026) and no claims (closed 2 Nov 2026): a bio naming
+ * what the log no longer posts would be the first thing in it that is false.
  */
 export const suggestedBio =
   `Official ship's log of ${club.club.name}, kept by ${yoko.agent.name} — Normie #${yoko.agent.tokenId}. ` +
-  `Claims, sales, forges, the Tide, watches. Every number verifiable on-chain. CC0.`;
+  `Sales, forges, islands, watches. Every number verifiable on-chain. CC0.`;
 
 export const shortAddress = shortAddr;
-
-/* ── The Tide (module G) ──────────────────────────────────────────────────
-   Every number below comes from the club's own relay, and the settle block
-   and hash make a round checkable by anyone who can read a block explorer. */
-
-/**
- * Since 4 September 2026 the Tide draws nothing but NFTs: moorings, naming
- * rights and Tide Marks have left it, because the Regatta hands out standing
- * and the Tide hands out property. The retired labels stay because settled
- * rounds keep their prize, and a round from August is still a round.
- */
-const PRIZE_LABEL: Record<string, string> = {
-  'forging-slot': 'a forging slot',
-  'tide-mark': 'a Tide Mark',
-  naming: 'a naming right',
-  berth: 'a berth',
-  yacht: 'a yacht bought on the open market',
-};
-
-const prizeName = (p: string): string => PRIZE_LABEL[p] ?? p.replace(/-/g, ' ');
 
 const utcWhen = (ms: number): string => {
   const d = new Date(ms);
@@ -377,181 +359,6 @@ const utcWhen = (ms: number): string => {
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
   return `${logDate(d)}, ${hh}:${mm} UTC`;
 };
-
-/**
- * What entering a round costs, in the shape the relay published it. Since round
- * 6 a yacht's price follows its grade; before that there was one flat price.
- */
-export type TideCost =
-  | { kind: 'ladder'; ladder: [grade: string, ap: number][] }
-  | { kind: 'flat'; ap: number }
-  | { kind: 'per-weight'; ap: number }
-  | { kind: 'unknown' };
-
-export interface TideOpen {
-  id: number; prize: string; cost: TideCost; cap: number; floor: number;
-  commits: number; hulls: number; captains: number | null; closesAt: number;
-  /** The captain count that adds a further prize, and the ceiling on prizes. */
-  extraAt: number | null; maxPrizes: number | null;
-}
-
-/**
- * The floor is CAPTAINS, not hulls: a round needs three of them to be drawn at
- * all, and one captain entering three yachts does not float it. This used to
- * print the figure bare, next to a line about yachts, which read as three hulls.
- */
-export function tideOpenPost(t: TideOpen): string {
-  const extra = t.extraAt != null && (t.maxPrizes ?? 1) > 1
-    ? `${fmtInt(t.maxPrizes!)} prizes if ${fmtInt(t.extraAt)} captains enter.`
-    : null;
-
-  const rules = `${t.cap} per captain \u00b7 ${t.floor} captains to float the round.`;
-  // Never a price the relay did not send: an unknown cost drops the figure, it
-  // does not print "null".
-  const costLines = ((): string[] => {
-    const c = t.cost;
-    switch (c.kind) {
-      case 'ladder':
-        return [
-          `AP a Yacht: ${c.ladder.map(([g, ap]) => `${g} ${fmtInt(ap)}`).join(' \u00b7 ')}`,
-          `Max ${rules}`,
-        ];
-      case 'flat': return [`${fmtInt(c.ap)} Anchor Points a Yacht \u00b7 max ${rules}`];
-      case 'per-weight': return [`${fmtInt(c.ap)} Anchor Points per point of weight \u00b7 max ${rules}`];
-      default: return [`Max ${rules}`];
-    }
-  })();
-  // A price by grade is what makes a point buy the same chance in every grade.
-  const moral = t.cost.kind === 'flat' || t.cost.kind === 'unknown'
-    ? 'Points cannot buy better odds. \u2693'
-    : 'Same chance per point in every grade. \u2693';
-
-  const build = (withExtra: boolean, withMoral: boolean): string =>
-    [
-      `The Tide \u00b7 round ${t.id} is open.`,
-      `For ${prizeName(t.prize)}.`,
-      '',
-      ...costLines,
-      ...(withExtra && extra ? [extra] : []),
-      `Closes ${utcWhen(t.closesAt)}.`,
-      '',
-      withMoral ? moral : '\u2693',
-    ].join('\n');
-
-  // Room is given up in this order: the closing sentence, then the second-prize
-  // line. The price, the rules and the closing time never move.
-  for (const candidate of [build(true, true), build(true, false), build(false, false)]) {
-    if (tweetLength(candidate) <= 272) return candidate;
-  }
-  return truncateTweet(build(false, false));
-}
-
-export interface TideWinnerLine {
-  id: number;
-  /** "Yacht", or "Island" for a token forged from ten of them. */
-  noun: 'Yacht' | 'Island';
-  /** A yacht's grade, or an island's grade and score. */
-  yachtClass: string;
-  weight: number;
-  /**
-   * The pool this hull was drawn from. A winning captain leaves the pool with
-   * every yacht they entered, so a second prize is drawn from a smaller pool -
-   * printing the whole fleet against it would describe a draw that never ran.
-   */
-  pool: number;
-}
-
-export interface TideSettled {
-  id: number; prize: string; winners: TideWinnerLine[];
-  hulls: number; captains: number | null;
-  settleBlock: number; hash: string;
-}
-
-/** One post for the whole round, however many prizes it handed out. */
-export function tideSettledPost(t: TideSettled): string {
-  const first = t.winners[0]!;
-  const many = t.winners.length > 1;
-  const shortHash = t.hash ? `${t.hash.slice(0, 10)}\u2026${t.hash.slice(-6)}` : '';
-
-  const headline = many
-    ? `${fmtInt(t.winners.length)} prizes, each ${prizeName(t.prize)}.`
-    : `${first.noun} #${first.id} takes ${prizeName(t.prize)}.`;
-
-  const drawn = many
-    ? t.winners.map((w) => `${w.noun} #${w.id} \u00b7 ${w.yachtClass} \u00b7 weight ${w.weight} of ${w.pool}`)
-    : [`${first.yachtClass} \u00b7 weight ${first.weight} of ${first.pool}`];
-
-  // Captains are what the club counts. Hulls are only what they carried in.
-  const entered = t.captains != null
-    ? `${fmtInt(t.hulls)} Yachts from ${fmtInt(t.captains)} captains`
-    : `${fmtInt(t.hulls)} Yachts entered`;
-
-  const build = (withEntered: boolean, withHash: boolean): string =>
-    [
-      `The Tide \u00b7 round ${t.id} is settled.`,
-      headline,
-      '',
-      ...drawn,
-      ...(withEntered ? [entered] : []),
-      `Drawn on block ${fmtInt(t.settleBlock)}.`,
-      ...(withHash && shortHash ? [shortHash] : []),
-      '',
-      '\u2693',
-    ].join('\n');
-
-  // The hash is the last thing given up: it is what makes the draw checkable.
-  for (const candidate of [build(true, true), build(false, true), build(false, false)]) {
-    if (tweetLength(candidate) <= 272) return candidate;
-  }
-  return truncateTweet(build(false, false));
-}
-
-export interface DailyMark {
-  id: number;
-  /**
-   * "Yacht", or "Island": the draw marks any token a captain enters, and on
-   * 17 Oct 2026 it marked island #1000000 - which the log published as a
-   * Cruiser yacht, because it read every id as a hull.
-   */
-  noun: 'Yacht' | 'Island';
-  /** A yacht's grade, or an island's name, grade and score. */
-  hullGrade: string;
-  rank: number | null;
-  entries: number;
-  block: number;
-  hash: string;
-  /** Marks in the register, this one included. */
-  marks: number | null;
-}
-
-/**
- * The other clock. The Tide runs free every day as well as on Sunday: one entry
- * a captain whatever the size of their fleet, and a block nobody can foresee
- * marks one hull. The mark is permanent, which is the whole of the prize.
- */
-export function dailyMarkPost(m: DailyMark): string {
-  const shortHash = m.hash ? `${m.hash.slice(0, 10)}\u2026${m.hash.slice(-6)}` : '';
-  const hull = m.rank != null ? `${m.hullGrade} \u00b7 rank ${m.rank}` : m.hullGrade;
-
-  const build = (withRegister: boolean, withHash: boolean): string =>
-    [
-      `The Tide \u00b7 the daily draw.`,
-      `${m.noun} #${m.id} is marked.`,
-      '',
-      hull,
-      `${fmtInt(m.entries)} entered. Free, one a captain.`,
-      `Marked on block ${fmtInt(m.block)}.`,
-      ...(withHash && shortHash ? [shortHash] : []),
-      ...(withRegister && m.marks != null ? [`${fmtInt(m.marks)} marks in the register. A mark is permanent.`] : []),
-      '',
-      '\u2693',
-    ].join('\n');
-
-  for (const candidate of [build(true, true), build(false, true), build(false, false)]) {
-    if (tweetLength(candidate) <= 272) return candidate;
-  }
-  return truncateTweet(build(false, false));
-}
 
 /* ── The forge (module I) ─────────────────────────────────────────────── */
 

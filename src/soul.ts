@@ -20,7 +20,6 @@ export interface DayFacts {
   claims: number;
   /** Sale and sweep posts together: hulls that changed hands. */
   moved: number;
-  tides: number;
   forges: number;
   afloat: number;
   at: Date;
@@ -88,7 +87,6 @@ export function bankFor(f: DayFacts): keyof typeof yoko.lines {
   if (f.claims > 0 && f.moved > 0) return 'busy';
   if (f.claims > 0) return 'claims';
   if (f.moved > 0) return 'market';
-  if (f.tides > 0) return 'tide';
   return 'quiet';
 }
 
@@ -136,7 +134,7 @@ function pick(
  */
 export function composeEntry(f: DayFacts, a: AgentFacts, recent: string[] = []): Entry {
   const bank = bankFor(f);
-  const seed = `${f.at.toISOString().slice(0, 10)}:${f.claims}:${f.moved}:${f.tides}`;
+  const seed = `${f.at.toISOString().slice(0, 10)}:${f.claims}:${f.moved}`;
 
   const openerTpl = pick(bank, seed, recent, f, a);
   const opener = openerTpl ? fill(openerTpl, f, a) : `${hulls(f.claims)} afloat, ${hulls(f.moved)} sold.`;

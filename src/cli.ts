@@ -8,7 +8,6 @@ import { claimOpen, fleetCount, headBlock, totalMinted, publicClient } from './c
 import { classify, type ChainEvent } from './chain/classify';
 import { handleEvent } from './modules/events';
 import { runWatch } from './modules/watch';
-import { previewDailyTide, previewTide } from './modules/tide';
 import { runForgeWatch } from './modules/forge';
 import { runJournal } from './modules/journal';
 import { parseHullId } from './modules/lookup';
@@ -16,7 +15,7 @@ import { enqueue, waitForQueue } from './poster';
 import { lookupReply, pedigree, pedigreePost, suggestedBio } from './templates';
 import { fmtInt, grade } from './util';
 import { resolveYacht, resolveYachts } from './yacht';
-import { getChandlery, getForge, getRelayStats, getTide, relayHealth } from './api/relay';
+import { getChandlery, getForge, getRegatta, getRelayStats, relayHealth } from './api/relay';
 import { club as clubData } from './config';
 
 const l = log('cli');
@@ -40,7 +39,6 @@ const HELP = `
     npm run cli -- preview lookup 1709         render + print a lookup reply
     npm run cli -- preview watch               build the watch post from live numbers
     npm run cli -- preview journal             write Yoko's entry for today, now
-    npm run cli -- preview daily [1000000]     render yesterday's free daily draw (or as if it marked that id)
     npm run cli -- soul                        who is keeping this log, and on what numbers
     npm run cli -- tx 0xabc...                 replay a real transaction through the pipeline
     npm run cli -- backfill 25890000 25890500  replay a block range
@@ -69,20 +67,14 @@ async function verify(): Promise<void> {
   const health = await relayHealth();
   if (health) {
     console.log(`  club relay    ok   ${health}`);
-    const [tide, forge, rstats, chandlery] = await Promise.all([getTide(), getForge(), getRelayStats(), getChandlery()]);
-    const unfloated = tide?.round && tide.round.closed && !tide.round.winners?.length && !tide.round.winner
-      && (tide.round.captains ?? 0) < tide.round.floor;
-    if (unfloated) {
-      // A round that closed short of its floor is never drawn, and the relay
-      // opens the next one in its own time. Nothing to post until it does.
-      const r = tide.round!;
-      console.log(`  tide          ok   round ${r.id} closed ${new Date(r.closesAt).toISOString().slice(0, 10)} with ${r.captains ?? 0} of ${r.floor} captains - not drawn. No round open; ${tide.potCount ?? 0} prize(s) in the pot`);
-    } else if (tide?.round) {
-      const r = tide.round;
-      const prizes = (r.maxWinners ?? 1) > 1 && r.winnerAt?.length ? `, ${r.maxWinners} prizes at ${r.winnerAt[0]} captains` : '';
-      console.log(`  tide          ok   round ${r.id} for ${r.prize}, ${r.captains ?? 0} captains / ${r.fleet?.length ?? 0} hulls in${prizes}, closes ${new Date(r.closesAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`);
-    } else if (tide?.dormant) {
-      console.log(`  tide          ok   dormant - no prize in the club's wallet, ${tide.potCount ?? 0} waiting. No round opens, and the log says nothing.`);
+    const [regatta, forge, rstats, chandlery] = await Promise.all([getRegatta(), getForge(), getRelayStats(), getChandlery()]);
+    // The Tide was retired in October 2026 and its prize went to the Regatta:
+    // one yacht to each division title with enough captains on the final board.
+    const sn = regatta?.season;
+    if (sn) {
+      const ends = sn.endAt ? new Date(sn.endAt).toISOString().slice(0, 16).replace('T', ' ') : '?';
+      const prize = sn.prize ? `, a ${sn.prize.kind} per division title at ${sn.prize.minCaptains}+ captains` : '';
+      console.log(`  regatta       ok   season ${sn.id} "${sn.name}" ${sn.status}${sn.day ? `, day ${sn.day} of ${sn.days}` : ''}, closes ${ends} UTC${prize}`);
     }
     if (forge) {
       const opens = forge.window?.opensAt ? new Date(forge.window.opensAt).toISOString().slice(0, 16).replace('T', ' ') : 'unannounced';
@@ -106,7 +98,7 @@ async function verify(): Promise<void> {
         : `  chandlery     ok   catalog matches club.json (${Object.keys(chandlery.catalog).length} items)`);
     }
   } else {
-    console.log('  club relay    --   not answering; the Tide module will stay quiet');
+    console.log('  club relay    --   not answering; the watch drops the season line and the forge waits');
   }
 
   if (hasXCredentials()) {
@@ -175,11 +167,6 @@ async function preview(args: string[]): Promise<void> {
 
     case 'journal':
       return runJournal(true);
-
-    case 'tide':
-      return previewTide();
-    case 'daily':
-      return previewDailyTide(arg ? Number(arg) : undefined);
 
     case 'forge-phase':
       return runForgeWatch();
@@ -264,11 +251,11 @@ async function soul(): Promise<void> {
   console.log(`  portrait      ${p ? `${(p.bits.match(/1/g) ?? []).length} lit pixels, cached` : 'unavailable'}`);
 
   const j = getJournal();
-  console.log(`  today         ${j.claims} claimed, ${j.moved} moved, ${j.tides} tide, entry ${j.lastEntryDay === j.day ? 'written' : 'not written yet'}`);
+  console.log(`  today         ${j.claims} claimed, ${j.moved} moved, ${j.forges} forged, entry ${j.lastEntryDay === j.day ? 'written' : 'not written yet'}`);
   console.log(`  vocabulary    ${Object.entries(yoko.lines).map(([k, v]) => `${k} ${v.length}`).join(', ')}`);
 
   const sample = composeEntry(
-    { claims: j.claims, moved: j.moved, tides: j.tides, forges: j.forges, afloat: 0, at: new Date() },
+    { claims: j.claims, moved: j.moved, forges: j.forges, afloat: 0, at: new Date() },
     a,
     [...j.recent],
   );

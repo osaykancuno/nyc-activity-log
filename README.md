@@ -18,12 +18,12 @@ The club's own bot. It reads the chain and the club's public CC0 API and writes 
 | **D · Lookup** | a mention containing `#1709` | one reply: traits and art, never an owner |
 | **E · Watch** | 09:00 and 19:00 Europe/Rome, every day | afloat / fleet / awaiting claim / captains, the running Regatta season, and the block it was all read at. Once the claim closes for good (2 Nov 2026 12:00 UTC, `mintOpen()` false) nothing is awaiting a claim any more — a yacht not claimed is never built — so the watch prints afloat and islands instead. A day when nothing changed hands is written as a different post: it leads with how far the chain travelled while the fleet stood still |
 | **F · Pedigree** | CLI | class weights of a forge set |
-| **G · Tide** | the club relay | a round opens: prize, cost, cap, the captains needed to float it, close. It settles: every winner — yacht or island — a round hands out two prizes once 30 captains enter — each against the pool it was drawn from, the settle block and the draw hash |
-| **G · Tide, daily** | the club relay | the free draw, once a day: the token a block nobody could foresee marked — a yacht, or an island, which is named as one with its grade and score — how many captains entered, the block and the hash. A day that marked nobody is not posted — roughly two in five end that way |
 | **I · Forge** | relay phase + 10 hulls burned in one tx | arms itself when the club opens forging — no date to remember |
 | **J · Captain's log** | 21:00 Europe/Rome, every day | the keeper's own entry: the shape of the day, one thought about it, and her live canvas numbers + card |
 
 **Off, deliberately.** The Chandlery (H) is the one module with data and still no post. The relay publishes the catalogue fleet-wide, but a *purchase* is only visible through `/chandlery/{wallet}` — so the only way to log renames and flags would be to walk every holder's wallet. The club publishes no holder lists and neither does its log, so H stays dark until a hull-keyed route exists. Same rule kills `/regatta/leaderboard` and `/logbook/captain/{wallet}`: read by the site, never by this bot.
+
+**Retired with the club's own.** The Tide (G) — the Sunday round and the free daily draw — was retired by the club in October 2026, and the module went with it. Its last weekly round was cancelled and refunded; the marks it gave out stay with their yachts; its prize now goes to the Regatta's division titles. The relay keeps `/tide` readable as history, and this log no longer reads it.
 
 Nor does it post listings, delistings, wallet dumps, or anything it cannot point at.
 
@@ -33,7 +33,7 @@ The account is not anonymous. It is written by **Yoko** — [agent #32683](https
 
 Module J is her diary. Everything else here is the club's record — numbers, blocks, hulls; once a day the keeper of that record writes up the day herself.
 
-**There is no model in the loop.** Her vocabulary is a file: [`data/yoko.json`](data/yoko.json). The day's numbers choose which bank of lines it draws from — quiet, claims, market, tide, busy — and a short memory in the state file keeps her from opening two entries the same way. That buys three things worth more than novelty: an entry costs one post and nothing else, it cannot invent a figure, and anyone can read her entire vocabulary before she ever speaks it.
+**There is no model in the loop.** Her vocabulary is a file: [`data/yoko.json`](data/yoko.json). The day's numbers choose which bank of lines it draws from — quiet, claims, market, busy — and a short memory in the state file keeps her from opening two entries the same way. That buys three things worth more than novelty: an entry costs one post and nothing else, it cannot invent a figure, and anyone can read her entire vocabulary before she ever speaks it.
 
 **What *is* live is the persona.** Her canvas level, action points, passes and pixel diff come from her own agent record at `api.normies.art` on every entry, so burning a Normie or editing pixels changes what the log says about her without a deploy. That endpoint is not ours, so it is allowed to move numbers and nothing else — its `backstory`, `greeting` and `systemPrompt` are read by nobody. Prose that reaches the timeline is prose that was committed to this repo.
 
@@ -46,7 +46,7 @@ npm run tools:soul    # every line, every bank, against the length and voice gua
 
 **The chain** for anything about ownership and money: `Transfer`, `totalMinted()`, transaction receipts, and `tokenURI` for the official art.
 
-**The club's own relay** (`https://nyc-realtime.fly.dev`, the service the 3D marina reads) for the off-chain half of the club: `/tide` — rounds, entries by hull, settle block, draw hash; `/forge` — the live phase, which is why nobody has to type the opening date into a config file; `/islands` and `/activation` — each island's grade, score, Anchor Points a day and wake cost; `/stats` — captains, and a cross-check against `totalMinted()`; `/chandlery` — the live price list, so a post never quotes a stale one. Its wallet-keyed routes are listed in `data/club.json` under `relay.neverRead` and the client refuses to be pointed at them.
+**The club's own relay** (`https://nyc-realtime.fly.dev`, the service the 3D marina reads) for the off-chain half of the club: `/regatta` — the running season and its division prize rule; `/forge` — the live phase, which is why nobody has to type the opening date into a config file; `/islands` and `/activation` — each island's grade, score, Anchor Points a day and wake cost; `/stats` — captains, and a cross-check against `totalMinted()`; `/chandlery` — the live price list, so a post never quotes a stale one. Its wallet-keyed routes are listed in `data/club.json` under `relay.neverRead` and the client refuses to be pointed at them.
 
 ## How a sale is proven
 
@@ -99,7 +99,7 @@ src/
   templates  every string the account will ever publish
   poster     dedup, rate limit, monthly budget, dry run
   store      append-only ledger + block cursor
-data/club.json   classes, weights, Chandlery prices, Tide rules, island dates
+data/club.json   classes, weights, Chandlery prices, island dates
 data/yoko.json   the keeper: her identity, and every sentence she can publish
 ```
 
@@ -138,9 +138,9 @@ X bills per request now, so the log's running cost is a bill rather than a quota
 | A post **containing a URL** | **$0.200** — thirteen times more, so the poster refuses one |
 | Reading your own mentions | $0.001 per mention returned, nothing when quiet |
 
-Two watches a day is $0.90 a month. Add the claims, sales, sweeps and Tide rounds of a quiet fleet and the whole account lands around **$2 a month**.
+Two watches a day is $0.90 a month. Add the claims, sales, sweeps and forges of a quiet fleet and the whole account lands around **$2 a month**.
 
-`MONTHLY_BUDGET_USD` is the bot's own ceiling: it counts what it spends, and once `BUDGET_RESERVE_USD` is left it keeps the remainder for claims, sweeps, forges and settled Tide rounds and drops the rest. Set a spending limit in the X developer console as well — one ceiling belongs to the code, the other to the account.
+`MONTHLY_BUDGET_USD` is the bot's own ceiling: it counts what it spends, and once `BUDGET_RESERVE_USD` is left it keeps the remainder for claims, sweeps and forges and drops the rest. Set a spending limit in the X developer console as well — one ceiling belongs to the code, the other to the account.
 
 ## Licence
 

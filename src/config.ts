@@ -29,7 +29,6 @@ export interface Club {
   classes: Record<ClassName, { weight: number; anchorPointsPerDay: number; note?: string }>;
   anchorPoints: { base: number; note: string };
   chandlery: Record<string, number | string>;
-  tide: any;
   islands: {
     forgeOpensAt: string; forgeClosesAt: string | null;
     hullsPerIsland: number; netSupplyChange: number; grades: string[];
@@ -56,7 +55,7 @@ export interface Yoko {
   byline: string;
   footer: string;
   forbid: string[];
-  lines: Record<'quiet' | 'claims' | 'market' | 'tide' | 'busy' | 'close', string[]>;
+  lines: Record<'quiet' | 'claims' | 'market' | 'busy' | 'close', string[]>;
 }
 
 const str = (k: string, d = ''): string => (process.env[k] ?? d).trim();
@@ -94,9 +93,8 @@ export const config = {
   maxBlockSpan: Math.max(20, num('MAX_BLOCK_SPAN', 400)),
   normiesContract: str('NORMIES_CONTRACT') as `0x${string}` | '',
 
-  /** The club's own relay: the public source behind the Tide and the forge phase. */
+  /** The club's own relay: the public source behind the forge phase, the islands and the Regatta. */
   relayUrl: (str('RELAY_URL', 'https://nyc-realtime.fly.dev')).replace(/\/$/, ''),
-  tidePollMs: Math.max(60_000, num('TIDE_POLL_MS', 5 * 60_000)),
   forgePollMs: Math.max(60_000, num('FORGE_POLL_MS', 15 * 60_000)),
 
   modules: {
@@ -108,7 +106,6 @@ export const config = {
     pedigree: bool('MODULE_PEDIGREE', true),
     /** 'auto' follows the relay's own forge phase, so nobody has to remember a date. */
     forge: str('MODULE_FORGE', 'auto') === 'auto' ? 'auto' : bool('MODULE_FORGE', false),
-    tide: bool('MODULE_TIDE', true),
     chandlery: bool('MODULE_CHANDLERY', false),
     /** Module J - Yoko's own entry, once a day, in her voice. */
     journal: bool('MODULE_JOURNAL', true),
@@ -168,7 +165,7 @@ export const config = {
   /** X bills per request. A post is $0.015 - and $0.200 if it contains a URL. */
   costPerPostUsd: num('COST_PER_POST_USD', 0.015),
   monthlyBudgetUsd: num('MONTHLY_BUDGET_USD', 5),
-  /** Below this much left, only claims, sweeps, forges and settled Tides go out. */
+  /** Below this much left, only claims, sweeps and forges go out. */
   budgetReserveUsd: num('BUDGET_RESERVE_USD', 1),
 
   x: {

@@ -51,42 +51,15 @@ const cards: [string, Buffer][] = [
     note: 'by longest-captain-name.eth · 120 residents · 12 services · 1,200 AP/day · plot 123',
     right: 'Flagship',
   }, 10)],
-  ['tide open', renderWatchCard(
-    [['Prize', 'yacht'], ['Cost per weight', '1,250 AP'], ['Captains entered', '1,234'], ['Yachts entered', '3,702'], ['Prizes', '2 at 30 captains']],
-    'the tide', 'Round 12',
-    'Closes 2026-12-13 18:00 UTC · max 3 per captain · 3 captains to float',
-  )],
-  ['tide settled, 1', renderYachtCard(commodore, 'the tide', {
-    title: 'Round 12 settled',
-    subtitle: `Yacht #${commodore.id} · ${grade(commodore)} · weight 12 of 1,136`,
-    note: 'block 25,920,169 · 0xfa7dde3d…25d4aa',
-    right: 'winner',
-  })],
-  ['tide settled, 2', renderFleetCard(two, 'the tide', {
-    title: 'Round 12 settled',
-    subtitle: `2 prizes · ${classBreakdown(two.map(grade))}`,
-    note: 'block 25,920,169 · 0xfa7dde3d…25d4aa',
-    right: 'winners',
-  }, 2)],
-  ['daily draw', renderYachtCard(sloop, 'the daily tide', {
-    title: `Yacht #${sloop.id}`,
-    subtitle: `${grade(sloop)} · rank ${sloop.rarityRank}`,
-    note: '14 entered · block 25,950,438 · 2026-09-10',
-    right: 'marked',
-  })],
-  ['daily fallback', renderWatchCard(
-    [['Marked', '#1191'], ['Entered', '14'], ['Marks in the register', '1,114']],
-    'the daily tide', 'The daily draw', '14 entered · block 25,950,438 · 2026-09-10',
-  )],
   // Not a card the log publishes: the pair that collided on 10 Sep 2026, plus a
   // watch title nobody would write. Both have to come out shrunk, never overlapped.
-  ['stress: caption', renderYachtCard(sloop, 'the daily tide', {
-    title: 'Yacht #1191 marked', subtitle: 'Sloop · rank 1714',
-    note: '6 entered · block 25,950,438', right: '2026-09-10',
+  ['stress: caption', renderYachtCard(sloop, 'claim', {
+    title: 'Yacht #1191 afloat', subtitle: 'Sloop · rank 1714',
+    note: 'born from Normie #6146 · block 25,950,438', right: '2026-09-10',
   })],
   ['stress: watch title', renderWatchCard(
     [['A label that is rather long', '12,345,678'], ['Short', '1']],
-    'the daily tide', 'The daily draw · 2026-09-10 · and then some', 'note',
+    'middle watch', 'The middle watch · 2026-09-10 · and then some', 'note',
   )],
   ['watch', renderWatchCard(
     [['Afloat', '2,704'], ['Fleet on record', '10,000'], ['Awaiting claim', '7,296'], ['Captains', '1,097']],
@@ -102,7 +75,7 @@ const cards: [string, Buffer][] = [
     portrait: { bits: commodore.art.bits, on: commodore.art.on },
     name: 'CAPTAIN YOKO',
     identity: 'Keeper of the log · Normie #8362',
-    rows: [['Claimed today', '1,234'], ['Sold', '1,234'], ['Tide draws', '12'], ['Islands forged', '12'], ['Fleet afloat', '2,704'], ['Awaiting claim', '7,296']],
+    rows: [['Claimed today', '1,234'], ['Sold', '1,234'], ['Islands forged', '12'], ['Fleet afloat', '2,704'], ['Awaiting claim', '7,296']],
     note: '30 September 2026 · middle watch · The Reckoning Regatta, day 21 of 21',
   })],
 ];

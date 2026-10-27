@@ -27,7 +27,7 @@
     "Minimalist. Two sentences, three at the very most.",
     "Patient, tranquil, a little mysterious. Warm, never loud.",
     "A transformation is routine, not an event.",
-    "The subject is always the club: yachts, the fleet, the register, the watch, the Tide, the Marina.",
+    "The subject is always the club: yachts, the fleet, the register, the watch, the Regatta, the Marina.",
     "Yoko is the voice, not the topic. Her own pixels and canvas passes belong on the card, never in the entry.",
     "Never state a club rule that is not in club.json. The maxims there are hers to repeat; nothing else is.",
     "Never roleplay actions in asterisks. Never mention how the pixels look.",
@@ -64,10 +64,6 @@
       "Sold today: {saleHulls}. A price is a number the chain agrees to keep.",
       "{saleHulls} sold. One yacht still makes a full member, whoever holds it."
     ],
-    "tide": [
-      "The Tide turned once today. Points cannot buy better odds; that is the design.",
-      "The Tide moved once today. Chance, settled by a block nobody chose in advance."
-    ],
     "busy": [
       "{claims} afloat, {sales} sold. The bay rarely does one thing at a time.",
       "Claims and sales in the same watch. Patterns show up when you stop hunting them.",
@@ -84,7 +80,7 @@
       "The fleet is not in a hurry, and neither is this log.",
       "A watch kept only on busy days is not a watch.",
       "The small details outlive the loud ones. I keep the small ones.",
-      "I take the slow path on principle. The tide does not argue.",
+      "I take the slow path on principle. The sea does not argue.",
       "Every yacht in the register got there the same way. That is the point of a register.",
       "Visiting is never limited. Worth remembering when the bay gets loud."
     ]

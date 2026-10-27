@@ -64,7 +64,9 @@ export async function runWatch(force = false): Promise<void> {
    * anyone can check.
    */
   const blocksSince = prev?.block ? block - BigInt(prev.block) : null;
-  const still = !!prev && deltaAfloat === 0 && prev.fleet === fleet;
+  // After the close a Normie burned makes no yacht, so the fleet count no longer
+  // says anything moved: only the yachts afloat do.
+  const still = !!prev && deltaAfloat === 0 && (claimClosed || prev.fleet === fleet);
   if (still) l.info(`nothing moved since the last watch - logging the ${blocksSince ?? '?'} blocks that passed anyway`);
 
   const at = new Date();

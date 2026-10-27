@@ -61,7 +61,7 @@ export const isIsland = (id: number | bigint): boolean => Number(id) >= club.isl
  * What the club calls this hull. `class` comes from the burned Normie and stops
  * at Superyacht; the grade above it - Commodore, a Superyacht carrying two
  * extras - is published in `tier`, and it is the one worth 120 Anchor Points a
- * day and weight 12 in a Tide round. Reading `class` alone published every
+ * day and weight 12 in a forge score. Reading `class` alone published every
  * Commodore as a plain Superyacht, and printed a Commodore's own AP rate and
  * draw weight beside the wrong name.
  */

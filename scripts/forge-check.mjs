@@ -123,27 +123,5 @@ const owner = { addr: CAPTAIN, ens: null };
   check('a long ENS still fits', tweetLength(text) <= 275, `${tweetLength(text)} chars`);
 }
 
-// The Tide marks and draws islands too. On 17 Oct 2026 the daily draw marked
-// island #1000000 and the log called it "Yacht #1000000 ... Cruiser".
-{
-  const { dailyMarkPost, tideSettledPost } = await import('../src/templates.ts');
-  const mark = dailyMarkPost({
-    id: 1000000, noun: 'Island', hullGrade: 'K4NCUN0 ISLE · Isle · score 26', rank: null,
-    entries: 3, block: 26_215_700, hash: '0x81c6398f3772c2eb7ad57f7a4ab93fd710bb2a7430a873bba81663799d9b6dfd', marks: 33,
-  });
-  check('a daily mark on an island says Island', mark.includes('Island #1000000 is marked.') && !/Yacht #1000000|Cruiser/.test(mark), mark);
-  check('a daily mark on an island fits', tweetLength(mark) <= 272, `${tweetLength(mark)} chars`);
-
-  const settled = tideSettledPost({
-    id: 9, prize: 'yacht', hulls: 31, captains: 30, settleBlock: 26_300_000, hash: '0xabc0000000000000000000000000000000000000000000000000000000def123',
-    winners: [
-      { id: 1000002, noun: 'Island', yachtClass: 'Normie Cay · Cay · score 12', weight: 12, pool: 80 },
-      { id: 1709, noun: 'Yacht', yachtClass: 'Superyacht', weight: 5, pool: 68 },
-    ],
-  });
-  check('a Tide round won by an island names it an island', settled.includes('Island #1000002') && settled.includes('Yacht #1709'), settled);
-  check('a two-prize round with an island fits', tweetLength(settled) <= 275, `${tweetLength(settled)} chars`);
-}
-
 console.log(`\n  ${failures ? `${failures} FAILURE(S)` : 'all checks passed'}\n`);
 process.exit(failures ? 1 : 0);

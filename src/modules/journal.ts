@@ -39,7 +39,7 @@ export async function runJournal(force = false): Promise<void> {
     return;
   }
 
-  const quiet = j.claims === 0 && j.moved === 0 && j.tides === 0 && j.forges === 0;
+  const quiet = j.claims === 0 && j.moved === 0 && j.forges === 0;
   if (quiet && !config.journalOnQuietDays && !force) {
     l.info('nothing happened today and quiet entries are off - staying silent');
     closeJournalDay([]);
@@ -72,11 +72,11 @@ export async function runJournal(force = false): Promise<void> {
     l.debug('regatta unavailable for the card', e);
   }
 
-  const facts: DayFacts = { claims: j.claims, moved: j.moved, tides: j.tides, forges: j.forges, afloat, at };
+  const facts: DayFacts = { claims: j.claims, moved: j.moved, forges: j.forges, afloat, at };
   const agent = await getAgentFacts();
   const entry = composeEntry(facts, agent, [...j.recent]);
 
-  l.info(`entry for ${day} (${entry.bank}): ${j.claims} claimed, ${j.moved} moved, ${j.tides} tide, agent numbers from ${agent.source}`);
+  l.info(`entry for ${day} (${entry.bank}): ${j.claims} claimed, ${j.moved} moved, ${j.forges} forged, agent numbers from ${agent.source}`);
 
   // The ledger the entry is a reading of. Deliberately not the entry itself:
   // the post says what the day amounted to, the card says what it was.
@@ -86,8 +86,6 @@ export async function runJournal(force = false): Promise<void> {
     ...(claimClosed && !j.claims ? [] : [['Claimed today', fmtInt(j.claims)] as [string, string]]),
     ['Sold', fmtInt(j.moved)],
   ];
-  // Both clocks land in this count, and a daily mark is not a round.
-  if (j.tides) rows.push(['Tide draws', fmtInt(j.tides)]);
   if (j.forges) rows.push(['Islands forged', fmtInt(j.forges)]);
   if (count) {
     rows.push(['Fleet afloat', fmtInt(count.afloat)]);

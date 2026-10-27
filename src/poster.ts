@@ -84,7 +84,7 @@ async function drain(): Promise<void> {
         continue;
       }
       if ((b.leftUsd <= config.budgetReserveUsd || b.left <= config.budgetReserve) && job.priority < 80) {
-        l.warn(`budget reserve reached ($${b.leftUsd.toFixed(3)} left). Keeping it for claims, sweeps and settled rounds; dropping ${job.kind}.`);
+        l.warn(`budget reserve reached ($${b.leftUsd.toFixed(3)} left). Keeping it for claims, sweeps and forges; dropping ${job.kind}.`);
         skipped++;
         continue;
       }

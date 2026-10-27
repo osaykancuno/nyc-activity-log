@@ -9,15 +9,14 @@ import { yoko } from '../src/config.ts';
 
 const agent = await getAgentFacts();
 const shapes = [
-  { claims: 0, moved: 0, tides: 0, forges: 0 },
-  { claims: 0, moved: 0, tides: 1, forges: 0 },
-  { claims: 1, moved: 0, tides: 0, forges: 0 },
-  { claims: 4, moved: 0, tides: 0, forges: 0 },
-  { claims: 0, moved: 1, tides: 0, forges: 0 },
-  { claims: 0, moved: 7, tides: 1, forges: 0 },
-  { claims: 3, moved: 12, tides: 1, forges: 1 },
+  { claims: 0, moved: 0, forges: 0 },
+  { claims: 1, moved: 0, forges: 0 },
+  { claims: 4, moved: 0, forges: 0 },
+  { claims: 0, moved: 1, forges: 0 },
+  { claims: 0, moved: 7, forges: 1 },
+  { claims: 3, moved: 12, forges: 1 },
   // Absurd on purpose: the busiest day this collection could ever have.
-  { claims: 999, moved: 1234, tides: 9, forges: 9 },
+  { claims: 999, moved: 1234, forges: 9 },
 ];
 
 // X gives a free account 280 characters. Every template in this repo aims at
@@ -58,6 +57,6 @@ ${'─'.repeat(52)}`);
 for (const s of shapes) {
   const facts = { ...s, afloat: 824, at: new Date(Date.UTC(2026, 8, 4, 21, 45)) };
   const e = composeEntry(facts, agent, []);
-  console.log(`\n── ${e.bank} (${s.claims} claimed, ${s.moved} moved, ${s.tides} tide) ${'─'.repeat(20)}\n${e.text}`);
+  console.log(`\n── ${e.bank} (${s.claims} claimed, ${s.moved} moved, ${s.forges} forged) ${'─'.repeat(20)}\n${e.text}`);
 }
 process.exit(bad ? 1 : 0);
